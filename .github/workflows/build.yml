@@ -70,18 +70,18 @@ jobs:
           npx cap sync android
       - name: Chiave di firma
         env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
         run: |
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
-            echo "KEYSTORE_PASSWORD=$KS_PASS" >> $GITHUB_ENV; echo "KEY_PASSWORD=$KS_PASS" >> $GITHUB_ENV; echo "KEY_ALIAS=$KS_ALIAS" >> $GITHUB_ENV
+          if [ -n "$KEY_PASS" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in native/android/upload.jks.enc -out "$RUNNER_TEMP/upload.jks" -pass env:KEY_PASS
+            echo "KEYSTORE_PASSWORD=$KEY_PASS" >> $GITHUB_ENV; echo "KEY_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
+            echo "REAL_KEY=1" >> $GITHUB_ENV
           else
-            echo "::warning::Manca la chiave di firma nei segreti: uso una chiave temporanea, l'APK si installa ma non va bene per il Play Store."
+            echo "::warning::Manca il segreto ANDROID_KEY_PASS: uso una chiave temporanea. L'APK si installa, ma il pacchetto per il Play Store non viene creato."
             keytool -genkeypair -keystore "$RUNNER_TEMP/upload.jks" -storepass temporanea -keypass temporanea -alias tavolo -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Tavolo dei Maghi"
-            echo "KEYSTORE_PASSWORD=temporanea" >> $GITHUB_ENV; echo "KEY_PASSWORD=temporanea" >> $GITHUB_ENV; echo "KEY_ALIAS=tavolo" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=temporanea" >> $GITHUB_ENV; echo "KEY_PASSWORD=temporanea" >> $GITHUB_ENV
           fi
+          echo "KEY_ALIAS=tavolo" >> $GITHUB_ENV
           echo "KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> $GITHUB_ENV
       - name: Compila APK e pacchetto Play Store
         working-directory: native/android/android
@@ -90,24 +90,14 @@ jobs:
           ./gradlew --no-daemon assembleRelease bundleRelease
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/out/TavoloDeiMaghi-Android.apk"
-          cp app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/out/TavoloDeiMaghi-PlayStore.aab"
+          if [ "$REAL_KEY" = "1" ]; then cp app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/out/TavoloDeiMaghi-PlayStore.aab"; fi
       - uses: actions/upload-artifact@v4
         with: { name: android, path: out }
 
-  desktop:
-    name: App per ${{ matrix.label }}
+  windows:
+    name: App per Windows
     needs: web
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            label: Mac
-            flag: --mac
-          - os: windows-latest
-            label: Windows
-            flag: --win
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -122,22 +112,45 @@ jobs:
         run: |
           mkdir -p build && cp ../icon-1024.png build/icon.png
           npm install --no-audit --no-fund
-          npx electron-builder ${{ matrix.flag }} --publish never
+          npx electron-builder --win --publish never
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.label }}
-          path: |
-            native/desktop/dist/*.dmg
-            native/desktop/dist/*.exe
+          name: desktop-Windows
+          path: native/desktop/dist/*.exe
+
+  mac:
+    name: App per Mac
+    needs: web
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: web, path: native/desktop/web }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Compila
+        working-directory: native/desktop
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          mkdir -p build && cp ../icon-1024.png build/icon.png
+          npm install --no-audit --no-fund
+          npx electron-builder --mac --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-Mac
+          path: native/desktop/dist/*.dmg
 
   release:
     name: Pagina di download
-    needs: [android, desktop]
-    if: always() && (needs.android.result == 'success' || needs.desktop.result == 'success')
+    needs: [android, windows]
+    if: always() && (needs.android.result == 'success' || needs.windows.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-        with: { path: files, merge-multiple: true }
+        with: { path: files, merge-multiple: true, pattern: '{android,desktop-Windows}' }
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
@@ -149,9 +162,22 @@ jobs:
             - **Mac**: TavoloDeiMaghi-mac.dmg
             - **Windows**: TavoloDeiMaghi-Windows-Setup.exe
             Il file .aab serve solo per caricare l'app sul Play Store.
+            L'app per Mac compare qui qualche minuto dopo le altre.
             Si gioca anche dal browser: https://gruppochatgpt707-spec.github.io/tavolo-dei-maghi/
           files: |
             files/*.apk
             files/*.aab
-            files/*.dmg
             files/*.exe
+
+  release-mac:
+    name: Aggiunge l'app per Mac
+    needs: [mac, release]
+    if: always() && needs.mac.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: desktop-Mac, path: files }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          files: files/*.dmg

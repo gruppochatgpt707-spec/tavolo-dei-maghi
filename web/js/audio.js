@@ -238,6 +238,7 @@
     applyVolumes();
   });
 
+  if (root.__TEST__) root.__soundDebug = function () { return { ctx: ctx, master: master, musicBus: musicBus, sfxBus: sfxBus }; };
   root.Sound = {
     unlock: function () { ensure(); if (set.music) music.start(); },
     sfx: sfx, music: music,

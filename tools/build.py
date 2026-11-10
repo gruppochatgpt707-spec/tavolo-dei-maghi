@@ -17,9 +17,12 @@ tpl = (ROOT / 'tools' / 'sw.template.js').read_text()
 (WEB / 'sw.js').write_text(tpl.replace('__VERSION__', version).replace('__FILES__', json.dumps(files, indent=0)))
 print('sw.js', version, len(files), 'file')
 if '--preview' in sys.argv:
+    import re
     out = ROOT / 'dist' / 'preview'
     out.mkdir(parents=True, exist_ok=True)
     html = (WEB / 'index.html').read_text()
-    html = html.replace('<script src="js/config.js"></script>', '<script>window.__PREVIEW__=true;</script>\n<script src="js/config.js"></script>')
-    (out / 'index.html').write_text(html)
+    body = html.split('<body>', 1)[1].rsplit('</body>', 1)[0]
+    body = body.replace('<script src="js/config.js"></script>', '<script>window.__PREVIEW__=true;</script>\n<script src="js/config.js"></script>')
+    page = '<title>Il Tavolo dei Maghi</title>\n<link rel="stylesheet" href="app.css">\n' + body
+    (out / 'index.html').write_text(page)
     print('anteprima pronta in', out)

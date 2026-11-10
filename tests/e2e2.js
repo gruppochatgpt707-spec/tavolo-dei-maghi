@@ -2,7 +2,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const { startServer, launch, newPlayer } = require('./harness');
-const OUT = process.env.OUT; fs.mkdirSync(OUT, { recursive: true });
+const OUT = process.env.OUT || require('path').join(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: true });
 const PORT = 8125, BASE = `http://localhost:${PORT}/`;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log('•', ...a);

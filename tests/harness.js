@@ -152,6 +152,7 @@ async function launch() {
 async function newPlayer(browser, base, opts = {}) {
   const ctx = await browser.newContext({
     viewport: opts.viewport || { width: 390, height: 844 },
+    deviceScaleFactor: opts.dpr || 1,
     hasTouch: !!opts.touch,
     permissions: ['microphone']
   });
