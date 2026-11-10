@@ -6,7 +6,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 
 const DIST = path.join(__dirname, '..', 'web');
-const TYPES = { html: 'text/html; charset=utf-8', js: 'text/javascript', css: 'text/css', webp: 'image/webp', png: 'image/png', ttf: 'font/ttf', webmanifest: 'application/manifest+json', json: 'application/json' };
+const TYPES = { woff2: 'font/woff2', html: 'text/html; charset=utf-8', js: 'text/javascript', css: 'text/css', webp: 'image/webp', png: 'image/png', ttf: 'font/ttf', webmanifest: 'application/manifest+json', json: 'application/json' };
 
 function startServer(port) {
   const peers = new Map();

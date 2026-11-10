@@ -1,5 +1,5 @@
 /* Funzionamento senza rete: l'app resta installata e gioca contro i bot anche offline. */
-const VERSION = 'tavolo-03688308d3';
+const VERSION = 'tavolo-22a4af28bb';
 const FILES = [
 "./",
 "app.css",

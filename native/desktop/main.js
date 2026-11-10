@@ -10,7 +10,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280, height: 820, minWidth: 360, minHeight: 560,
-    backgroundColor: '#3a2211', title: 'Il Tavolo dei Maghi', autoHideMenuBar: true,
+    backgroundColor: '#0b0e1a', title: 'Il Tavolo dei Maghi', autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, sandbox: true }
   });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });

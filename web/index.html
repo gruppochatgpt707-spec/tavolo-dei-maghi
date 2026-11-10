@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#4a2c17">
+<meta name="theme-color" content="#121830">
 <meta name="description" content="Il tavolo online per giocare a Wizard con gli amici: previsioni, punteggio automatico e chat vocale.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +13,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="preload" href="fonts/Lora-Variable.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -127,7 +126,7 @@
   <section id="game" class="screen" hidden>
     <header class="topbar">
       <div class="tb-left">
-        <span class="roundlabel">Mano <b id="rNow">1</b> di <span id="rTot">15</span></span>
+        <span class="roundlabel"><span class="w">Mano </span><b id="rNow">1</b>/<span id="rTot">15</span></span>
         <span class="trumpchip" id="trumpChip"></span>
       </div>
       <div class="tb-right">
@@ -139,14 +138,24 @@
       </div>
     </header>
 
+    <div class="rail">
+      <aside class="strip" id="strip" aria-label="Previsioni dei giocatori">
+        <button class="strip-head" data-a="toggleStrip"><span>Previsioni</span><span class="strip-sum" id="stripSum"></span></button>
+        <div class="strip-cols" aria-hidden="true"><span>prese fatte / previste</span><span>punti</span></div>
+        <div class="strip-body" id="stripBody"></div>
+      </aside>
+      <div class="tray" id="tray">
+        <div class="deckslot" id="deckSlot"></div>
+        <div class="traylabel" id="trayLabel"></div>
+      </div>
+    </div>
+
     <main class="table" id="table">
+      <div class="rune" id="rune"></div>
       <svg class="orbit" id="orbit" aria-hidden="true"></svg>
       <div id="seats"></div>
-      <div class="medallion" id="medallion">
-        <div class="deckslot" id="deckSlot"></div>
-        <div class="medlabel" id="medLabel"></div>
-      </div>
       <div id="trick"></div>
+      <div class="status" id="status" aria-live="polite"></div>
       <div class="banner" id="banner" hidden></div>
 
       <div class="panel" id="bidPanel" hidden>
@@ -170,11 +179,6 @@
         <div class="gems" id="gems"></div>
       </div>
     </main>
-
-    <div class="giro" id="giro" aria-live="polite">
-      <div class="giro-head"><span id="giroTitle"></span><span class="giro-info" id="giroInfo"></span><span class="giro-time" id="giroTime"></span></div>
-      <ol class="giro-list" id="giroList"></ol>
-    </div>
 
     <div class="handzone" id="handzone">
       <div id="hand" class="hand"></div>

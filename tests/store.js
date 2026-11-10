@@ -10,9 +10,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const g = await ctx.newPage();
   await g.goto(BASE + 'index.html');
   await g.evaluate(() => {
-    document.body.innerHTML = '<div id="fg" style="position:fixed;inset:0;display:flex;align-items:center;gap:40px;padding:0 60px;background:radial-gradient(ellipse at 60% 50%,rgba(255,196,110,.5),rgba(20,8,0,.6) 80%),url(art/ui/wood.webp) center/380px"><div class="sheet-paper" style="padding:26px 34px;border-radius:6px;max-width:430px"><h1 class="wordmark" style="font-size:66px;text-align:left">Il Tavolo<br>dei Maghi</h1><p style="font:italic 22px/1.3 Lora,serif;color:#6b4a2e;margin-top:10px">Prevedi le tue prese. Gioca con gli amici, anche a distanza.</p></div><div class="fan" style="position:relative;flex:1;height:420px"></div></div>';
+    document.body.innerHTML = '<div id="fg" style="position:fixed;inset:0;display:flex;align-items:center;gap:40px;padding:0 60px;background:radial-gradient(ellipse at 62% 50%,#38426a 0,#1c2340 45%,#0b0e1a 100%)"><div class="sheet-paper torn" style="padding:26px 34px;border-radius:6px;max-width:430px"><h1 class="wordmark" style="font-size:66px;text-align:left">Il Tavolo<br>dei Maghi</h1><p style="font:italic 22px/1.3 var(--body);color:#5b3e22;margin-top:10px">Prevedi le tue prese. Gioca con gli amici, anche a distanza.</p></div><div class="fan" style="position:relative;flex:1;height:420px"></div></div>';
     const fan = document.querySelector('#fg .fan');
-    [['W1', -24], ['r12', -12], ['b9', 0], ['g7', 12], ['J3', 24]].forEach(([id, a], i) => { const d = document.createElement('div'); d.className = 'card'; d.style.cssText = `position:absolute;left:50%;bottom:-40px;width:190px;margin-left:-95px;transform-origin:50% 120%;transform:rotate(${a}deg);filter:drop-shadow(0 8px 12px rgba(0,0,0,.5))`; d.innerHTML = Cards.face(id); fan.appendChild(d); });
+    [['W1', -24], ['r12', -12], ['b9', 0], ['g7', 12], ['J3', 24]].forEach(([id, a], i) => { const d = document.createElement('div'); d.className = 'card'; d.style.cssText = `position:absolute;left:50%;bottom:-40px;width:190px;margin-left:-95px;transform-origin:50% 120%;transform:rotate(${a}deg);box-shadow:0 8px 18px rgba(0,0,0,.6)`; d.innerHTML = Cards.face(id); fan.appendChild(d); });
   });
   await sleep(800);
   await g.screenshot({ path: path.join(OUT, 'grafica-in-evidenza-1024x500.png') });

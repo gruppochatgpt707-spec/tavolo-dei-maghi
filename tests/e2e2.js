@@ -34,6 +34,7 @@ const peerPlaces = p => p.$$eval('.vlist li small', s => s.map(x => x.textConten
     /* SCENARIO VOCE: 3 nella stessa stanza + 1 a distanza */
     const a = await newPlayer(browser, BASE, { viewport: { width: 1440, height: 900 } });
     const b = await newPlayer(browser, BASE, { viewport: { width: 390, height: 844 }, touch: true });
+    b.on('pageerror', e => console.log('ERRORE JS telefono:', e.message, (e.stack || '').split('\n')[1]));
     const c = await newPlayer(browser, BASE, { viewport: { width: 390, height: 844 }, touch: true });
     const d = await newPlayer(browser, BASE, { viewport: { width: 390, height: 844 }, touch: true });
     const code = await create(a, 'Francesco');
@@ -94,7 +95,8 @@ const peerPlaces = p => p.$$eval('.vlist li small', s => s.map(x => x.textConten
     await a.click('#startBtn');
     await until(() => b.isVisible('#game'), 5000, 'partita avviata');
     const pages = [a, b, c, d];
-    await until(async () => (await Promise.all(pages.map(p => p.isVisible('#bidPanel')))).some(Boolean), 9000, 'schermata previsione');
+    /* se esce un Mago come briscola, il mazziere sceglie il colore prima delle previsioni */
+    await until(async () => { for (const p of pages) if (await p.isVisible('#trumpPanel')) { await p.click('#gems .gem', { force: true }).catch(() => {}); } return (await Promise.all(pages.map(p => p.isVisible('#bidPanel')))).some(Boolean); }, 12000, 'schermata previsione');
     // con l'host mandato avanti di 3 minuti il turno deve passare da solo
     const turnBefore = await b.evaluate(() => { const l = window.__log; return l[l.length - 1].turn; });
     const left = await b.evaluate(() => { const l = window.__log; return l[l.length - 1].timeLeft; });
@@ -109,7 +111,7 @@ const peerPlaces = p => p.$$eval('.vlist li small', s => s.map(x => x.textConten
     await b.screenshot({ path: `${OUT}/resume-phone.png` });
     await until(async () => (await a.evaluate(() => window.__S.core.players[1].connected)) === false, 5000, 'host vede la disconnessione');
     await b.click('[data-a=resumeClient]');
-    await until(() => b.isVisible('#game'), 6000, 'rientro');
+    try { await until(() => b.isVisible('#game'), 6000, 'rientro'); } catch (e) { await b.screenshot({ path: `${OUT}/rientro-fallito.png` }); console.log('errori host:', a.errors, 'errori telefono:', b.errors); console.log('stato telefono:', await b.evaluate(() => ({ home: !document.querySelector('#home').hidden, lobby: !document.querySelector('#lobby').hidden, game: !document.querySelector('#game').hidden, busy: !document.querySelector('#ovBusy').hidden, conn: !document.querySelector('#ovConn').hidden, msg: document.querySelector('#homeMsg').textContent, view: window.__S.view && window.__S.view.phase }))); throw e; }
     assert.equal(await a.evaluate(() => window.__S.core.players[1].connected), true);
     const handBack = await b.$$('.hcard');
     assert(handBack.length >= 1, 'mano recuperata');

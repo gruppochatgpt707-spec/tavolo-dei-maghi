@@ -23,6 +23,7 @@ if '--preview' in sys.argv:
     html = (WEB / 'index.html').read_text()
     body = html.split('<body>', 1)[1].rsplit('</body>', 1)[0]
     body = body.replace('<script src="js/config.js"></script>', '<script>window.__PREVIEW__=true;</script>\n<script src="js/config.js"></script>')
-    page = '<title>Il Tavolo dei Maghi</title>\n<link rel="stylesheet" href="app.css">\n' + body
+    fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;0,800;1,400&family=Almendra:wght@400;700&family=Uncial+Antiqua&display=swap">\n'
+    page = '<title>Il Tavolo dei Maghi</title>\n' + fonts + '<link rel="stylesheet" href="app.css">\n' + body
     (out / 'index.html').write_text(page)
     print('anteprima pronta in', out)

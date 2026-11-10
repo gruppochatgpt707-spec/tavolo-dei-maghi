@@ -146,19 +146,20 @@
     },
     W: function (n, P) {
       var E = [null,
-        { arms: [arm(34, -62, 'open'), arm(34, -62, 'open')], el: 'fire', at: function (F) { return [F.cx, F.pelY - 1.05 * F.u]; }, s: 0.62, hat: { type: 'wizard', color: '#7a1f1a', accent: '#e3b24a', bend: 1 } },
-        { arms: [arm(18, -6), arm(150, 172, 'open')], el: 'water', at: function (F) { return add(F.wr[1], [0, -0.85 * F.u]); }, s: 0.5, hood: '#1e3c70', staff: 0 },
+        { arms: [arm(34, -62, 'open'), arm(34, -62, 'open')], el: 'fire', at: function (F) { return [F.cx, F.pelY - 1.05 * F.u]; }, s: 0.62, hat: { type: 'wizard', color: '#3b2366', accent: '#e3b24a', bend: 1 } },
+        { arms: [arm(18, -6), arm(150, 172, 'open')], el: 'water', at: function (F) { return add(F.wr[1], [0, -0.85 * F.u]); }, s: 0.5, hood: '#2e2258', staff: 0 },
         { arms: [arm(74, 104, 'open'), arm(74, 104, 'open')], el: 'nature', at: function (F) { return [F.cx, F.headC[1] - 1.7 * F.u]; }, s: 0.75, hat: { type: 'leaves' } },
         { arms: [arm(162, 178, 'open'), arm(28, 34, 'open')], el: 'light', at: function (F) { return add(F.wr[0], [0, -0.75 * F.u]); }, s: 0.55, hat: { type: 'wizard', color: '#3a2a6a', accent: '#e3b24a', bend: -1 } }
       ][n];
-      var g = { type: 'robe', main: P.cloth[n % 2 ? 0 : 3], accent: P.accent2, trim: '#e3b24a', belt: P.accent, sleeves: 'bell', cape: n === 1 || n === 4 ? { color: dark(P.cloth[0], 0.3), lining: '#e3b24a', wind: 24 } : null };
+      var robe = [null, '#5B3A8C', '#3f2a6e', '#7a5aa8', '#4a2f70'][n];
+      var g = { type: 'robe', main: robe, accent: P.accent2, trim: '#d8c9ff', belt: '#e3b24a', sleeves: 'bell', cape: n === 1 || n === 4 ? { color: dark(robe, 0.35), lining: '#d8c9ff', wind: 24 } : null };
       var props = { front: function (F) { return A.PROPS[E.el](E.at(F), E.s * F.u * 1.6); } };
       if (n === 2) props.hand = [P_.staff(function (top, u) { return '<circle cx="' + A.f(top[0]) + '" cy="' + A.f(top[1]) + '" r="' + A.f(0.22 * u) + '" fill="#bfe6ff" stroke="#3a2414" stroke-width="2.4"/>'; }), null];
       return { H: 500, base: 815, garment: g, pose: { legs: [leg(8, 4), leg(8, 4)], arms: E.arms, headTilt: n === 3 ? -6 : 0 }, props: props, hat: E.hat || { type: 'none' }, hood: E.hood, element: E.el, face: n === 4 ? { look: -0.5, brows: 'up' } : {} };
     },
     J: function (n, P) {
-      var S = ['r', 'b', 'g', 'y'][n - 1], Q = A.PAL[S];
-      var alt = { r: '#3E8E8A', b: '#E39A3A', g: '#C9574F', y: '#5B4E9A' }[S];
+      var Q = { cloth: [[null, '#f1ece2', '#2b272b', '#f1ece2', '#2b272b'][n], 0, 0, '#1f1c1f'], accent2: '#d4af37', main: '#2b272b' };
+      var alt = [null, '#2b272b', '#f1ece2', '#8a8490', '#f1ece2'][n];
       var arms = [
         [arm(42, 150, 'open'), arm(42, 150, 'open')],
         [arm(48, -64), arm(118, 152)],
@@ -175,7 +176,7 @@
 
   function build(id) {
     var c = CAST[id], special = id[0] === 'W' || id[0] === 'J';
-    var suit = special ? ELEM[+id[1]] : id[0], v = SUITS.indexOf(suit), rank = special ? 0 : +id.slice(1);
+    var suit = special ? (id[0] === 'W' ? 'w' : 'j') : id[0], v = special ? 0 : SUITS.indexOf(suit), rank = special ? 0 : +id.slice(1);
     var Pal = A.PAL[suit];
     var role = special ? ROLES[id[0]](+id[1], Pal, c) : ROLES[rank](v, Pal, c);
     var female = c.g === 'f';

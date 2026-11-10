@@ -11,7 +11,13 @@
     g: { name: 'foresta', main: '#3E8A4F', skyTop: '#8BB77E', skyMid: '#B9D08A', horizon: '#F2DE98', far: '#8CB78B', far2: '#6EA174', mid: '#3E8A4F', mid2: '#2F6F40',
       ground: '#4B8A4E', ground2: '#3A7440', fore: '#2A5C35', canopy: '#2C5C38', accent: '#C9574F', accent2: '#F4C860', cloth: ['#3E8A4F', '#33733F', '#58A063', '#285C34'] },
     y: { name: 'girasoli', main: '#E0A526', skyTop: '#DE9A33', skyMid: '#EDBA4C', horizon: '#FCE6A6', far: '#EED08C', far2: '#E8C06A', mid: '#E0A526', mid2: '#C98E1E',
-      ground: '#D69A2A', ground2: '#BE8420', fore: '#A8731C', accent: '#5B4E9A', accent2: '#8C5A9E', cloth: ['#E0A526', '#C98E1E', '#EDBE52', '#A8731C'] }
+      ground: '#D69A2A', ground2: '#BE8420', fore: '#A8731C', accent: '#5B4E9A', accent2: '#8C5A9E', cloth: ['#E0A526', '#C98E1E', '#EDBE52', '#A8731C'] },
+    /* Maghi: notte stellata viola, nessun colore dei semi */
+    w: { name: 'notte', main: '#5B3A8C', skyTop: '#140f2e', skyMid: '#2f2163', horizon: '#9a7cc8', far: '#4d3a86', far2: '#3c2d6e', mid: '#5B3A8C', mid2: '#3e2a66',
+      ground: '#35285f', ground2: '#2a1f4e', fore: '#211840', accent: '#c9b8ff', accent2: '#e8e2f6', cloth: ['#5B3A8C', '#3f2a6e', '#7a5aa8', '#2e2050'] },
+    /* Giullari: palcoscenico bianco e nero, argento e oro */
+    j: { name: 'palco', main: '#2b272b', skyTop: '#4a4648', skyMid: '#9d968e', horizon: '#f1e9d8', far: '#d8cfbf', far2: '#c9bfae', mid: '#2b272b', mid2: '#3a3438',
+      ground: '#d9cfbd', ground2: '#b9ae9c', fore: '#8f8678', accent: '#d4af37', accent2: '#f4efe6', cloth: ['#f1ece2', '#2b272b', '#bdb6ac', '#1f1c1f'] }
   };
 
   function ridge(r, y, amp, freq, x0, x1, bottom) {
@@ -52,6 +58,13 @@
     }
     s += '<circle cx="' + f(sun[0]) + '" cy="' + f(sun[1]) + '" r="34" fill="#fff3c8" filter="url(#soft)"/><circle cx="' + f(sun[0]) + '" cy="' + f(sun[1]) + '" r="27" fill="#fff8de"/>';
     return s;
+  }
+
+  function stage(P, sun, hy) {
+    var id = 'st' + (A.uid++), g = 'sp' + (A.uid++);
+    var s = '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + P.skyTop + '"/><stop offset=".5" stop-color="' + P.skyMid + '"/><stop offset="' + f(hy / 900) + '" stop-color="' + P.horizon + '"/><stop offset="1" stop-color="' + P.horizon + '"/></linearGradient>';
+    s += '<radialGradient id="' + g + '" cx=".5" cy=".55" r=".55"><stop offset="0" stop-color="#fff8e6" stop-opacity=".9"/><stop offset=".55" stop-color="#fff1d0" stop-opacity=".35"/><stop offset="1" stop-color="#fff1d0" stop-opacity="0"/></radialGradient>';
+    return s + '<rect width="600" height="900" fill="url(#' + id + ')"/><rect width="600" height="900" fill="url(#' + g + ')"/>';
   }
 
   function longShadow(cx, base, P, sunX, w) {
@@ -136,10 +149,52 @@
   A.scene = function (suit, r, o) {
     var P = A.PAL[suit], sunLeft = o.sunLeft, hy = o.hy || 560 + r() * 30;
     var sun = [sunLeft ? 150 + r() * 70 : 450 - r() * 70, hy - 30 - r() * 50];
-    var back = sky(P, sun, hy, r), fore = '', side = sunLeft ? 1 : -1, motifSide = o.motifSide;
+    var back = suit === 'j' ? stage(P, sun, hy) : sky(P, sun, hy, r), fore = '', side = sunLeft ? 1 : -1, motifSide = o.motifSide;
     var mx = motifSide < 0 ? 110 + r() * 50 : 490 - r() * 50, V = o.variant || 0;
 
-    if (suit === 'r') {
+    if (suit === 'w') {
+      /* cielo stellato con luna, via lattea e la torre del mago */
+      back += '<path d="' + A.ribbon([[-30, 150 + r() * 60], [300, 210], [630, 100 + r() * 60]], false, 110, 3, { taper: 0.2, vary: 0.4 }) + '" fill="#cdb6ff" opacity=".14" filter="url(#soft)"/>';
+      for (var st = 0; st < 80; st++) { var sx = r() * 600, sy = r() * (hy - 60); back += '<circle cx="' + f(sx) + '" cy="' + f(sy) + '" r="' + f(0.8 + r() * 1.8) + '" fill="#fff6dc" opacity="' + f(0.45 + r() * 0.55) + '"/>'; }
+      for (var sk = 0; sk < 7; sk++) { var kx = 30 + r() * 540, ky = 40 + r() * (hy - 200), kz = 4 + r() * 5; if (Math.abs(kx - 300) < 90 && ky > 200) continue; back += '<path d="M' + f(kx) + ' ' + f(ky - kz) + 'L' + f(kx + kz * 0.25) + ' ' + f(ky - kz * 0.25) + 'L' + f(kx + kz) + ' ' + f(ky) + 'L' + f(kx + kz * 0.25) + ' ' + f(ky + kz * 0.25) + 'L' + f(kx) + ' ' + f(ky + kz) + 'L' + f(kx - kz * 0.25) + ' ' + f(ky + kz * 0.25) + 'L' + f(kx - kz) + ' ' + f(ky) + 'L' + f(kx - kz * 0.25) + ' ' + f(ky - kz * 0.25) + 'Z" fill="#fff3c4"/>'; }
+      back += '<circle cx="' + f(sun[0] + 11) + '" cy="' + f(sun[1] - 8) + '" r="25" fill="' + P.skyMid + '"/>';
+      back += land(ridge(r, hy - 80, 64, 2, -20, 620), mix(P.far, P.horizon, 0.18), r, { ink: 0, rim: 1.5, rimColor: '#d9c8ff', strokes: 6 });
+      back += land(ridge(r, hy - 14, 34, 3, -20, 620), P.far2, r, { ink: 1.4, inkOp: 0.5, rimColor: '#c9b8ff', strokes: 8 });
+      var tx = mx, tb = hy + 30;
+      back += '<circle cx="' + f(tx) + '" cy="' + f(tb - 120) + '" r="40" fill="#ffd77a" opacity=".28" filter="url(#soft)"/>';
+      back += A.shape([[tx - 24, tb], [tx - 19, tb - 150], [tx + 19, tb - 150], [tx + 24, tb]], { fill: '#4a3a6e', k: 6, ink: 2.4, inner: function () { return '<rect x="' + f(tx - 6) + '" y="' + f(tb - 128) + '" width="12" height="18" rx="6" fill="#ffd77a" stroke="#2a1a0c" stroke-width="1.6"/><rect x="' + f(tx - 5) + '" y="' + f(tb - 70) + '" width="10" height="14" rx="5" fill="#ffd77a" stroke="#2a1a0c" stroke-width="1.4"/>'; } });
+      back += A.shape([[tx - 32, tb - 146], [tx + 2, tb - 222], [tx + 32, tb - 146]], { fill: '#2e2050', k: 4, ink: 2.4 }) + '<path d="M' + f(tx + 2) + ' ' + f(tb - 222) + 'l10 -12" stroke="#2a1a0c" stroke-width="2"/><circle cx="' + f(tx + 13) + '" cy="' + f(tb - 236) + '" r="4" fill="#fff3c4"/>';
+      back += land(ridge(r, hy + 70, 16, 2, -20, 620), P.ground, r, { k: 8, ink: 2.4, rimColor: '#b9a2ee', strokes: 18 });
+      back += land(ridge(r, hy + 150, 12, 2, -20, 620), P.ground2, r, { k: 8, ink: 2.2, rimColor: '#a48ad8', strokes: 20, angle: 4 });
+      for (var ff = 0; ff < 12; ff++) { var fx2 = r() * 600, fy2 = hy + 40 + r() * 220; if (Math.abs(fx2 - 300) < 80) continue; back += '<circle cx="' + f(fx2) + '" cy="' + f(fy2) + '" r="7" fill="#ffe680" opacity=".25" filter="url(#soft)"/><circle cx="' + f(fx2) + '" cy="' + f(fy2) + '" r="2.2" fill="#fff4b0"/>'; }
+      fore += rock([sunLeft ? 500 : 100, 742], 46, 40, P.fore, r) + rock([sunLeft ? 90 : 510, 700], 30, 26, mix(P.fore, P.ground, 0.4), r);
+      fore += tuft(sunLeft ? 140 : 460, 720, 1, '#6a5c9a') + tuft(sunLeft ? 452 : 152, 760, 0.8, '#5a4e88');
+    } else if (suit === 'j') {
+      /* palcoscenico: sipario scuro, pavimento a scacchi, festone di bandierine */
+      var fy0 = hy + 30, Vy = fy0 - 300, X = function (u, y) { return 300 + u * 64 * (y - Vy) / (900 - Vy); };
+      back += '<rect y="' + f(fy0) + '" width="600" height="' + f(900 - fy0) + '" fill="#efe6d4"/>';
+      var rows = [0, 0.07, 0.16, 0.28, 0.43, 0.62, 0.86, 1.15], tiles = '';
+      for (var ro = 0; ro < rows.length - 1; ro++) {
+        var y1 = fy0 + (900 - fy0) * rows[ro], y2 = fy0 + (900 - fy0) * rows[ro + 1];
+        for (var u = -9; u < 9; u++) if ((u + ro) % 2 === 0) tiles += '<path d="M' + f(X(u, y1)) + ' ' + f(y1) + 'L' + f(X(u + 1, y1)) + ' ' + f(y1) + 'L' + f(X(u + 1, y2)) + ' ' + f(y2) + 'L' + f(X(u, y2)) + ' ' + f(y2) + 'Z"/>';
+      }
+      back += '<g fill="#2b272b" opacity=".85" stroke="#2a1a0c" stroke-width="1.2">' + tiles + '</g>';
+      back += '<path d="M0 ' + f(fy0) + 'H600" stroke="#2a1a0c" stroke-width="3"/>';
+      back += '<path d="M230 -10H370L560 ' + f(fy0 + 120) + 'H40Z" fill="#fff7e2" opacity=".2" filter="url(#soft)"/>';
+      [1, -1].forEach(function (sd) {
+        var x0 = sd > 0 ? -20 : 620, x1 = sd > 0 ? 128 : 472, pts = [[x0, -20], [x1, -20], [x1 - sd * 18, 160], [x1 - sd * 44, 380], [x1 - sd * 70, 520], [x1 - sd * 40, fy0 + 40], [x0, fy0 + 40]];
+        back += land(pts, P.mid, r, { k: 8, rim: 2.5, rimColor: '#8a8490', ink: 2.4, strokes: 6, angle: 90, extra: (function () { var q = ''; for (var j = 0; j < 5; j++) { var xx = x0 + sd * (22 + j * 26); q += A.inkLine([[xx, -10], [xx + sd * (j * 2), 300], [xx - sd * (10 + j * 6), fy0 + 30]], 5, j + (sd > 0 ? 0 : 20), j % 2 ? '#1c191c' : '#4a444a', { vary: 0.6, taper: 0.3 }); } return q; })() });
+        back += A.shape([[x1 - sd * 84, 504], [x1 - sd * 50, 490], [x1 - sd * 46, 530], [x1 - sd * 82, 540]], { fill: P.accent, shade: false, ink: 1.8 });
+      });
+      var val = '';
+      for (var vk = 0; vk < 8; vk++) { var vx = vk * 80 - 10; val += '<path d="M' + vx + ' 52Q' + (vx + 40) + ' 96 ' + (vx + 80) + ' 52" fill="' + P.mid2 + '" stroke="#2a1a0c" stroke-width="2"/>'; }
+      back += '<rect x="-10" y="-10" width="620" height="64" fill="' + P.mid2 + '" stroke="#2a1a0c" stroke-width="2"/>' + val + '<path d="M-10 54H610" stroke="' + P.accent + '" stroke-width="4"/>';
+      var bunt = '', by = function (x) { return 150 + Math.sin((x + 20) / 640 * Math.PI) * 60; };
+      bunt += '<path d="M-10 ' + f(by(-10)) + ' Q300 ' + f(by(300) + 60) + ' 610 ' + f(by(610)) + '" fill="none" stroke="#2a1a0c" stroke-width="2"/>';
+      for (var bk = 0; bk < 14; bk++) { var bx2 = 10 + bk * 44, byy = (function (x) { var t = (x + 10) / 620; return (1 - t) * (1 - t) * by(-10) + 2 * (1 - t) * t * (by(300) + 60) + t * t * by(610); })(bx2); bunt += '<path d="M' + f(bx2 - 13) + ' ' + f(byy) + 'L' + f(bx2 + 13) + ' ' + f(byy) + 'L' + f(bx2) + ' ' + f(byy + 30) + 'Z" fill="' + ['#f4efe6', '#2b272b', '#d4af37'][bk % 3] + '" stroke="#2a1a0c" stroke-width="1.5"/>'; }
+      back += bunt;
+      for (var cf = 0; cf < 16; cf++) { var cx3 = r() * 600, cy3 = fy0 + 30 + r() * 300; if (Math.abs(cx3 - 300) < 70) continue; back += '<rect x="' + f(cx3) + '" y="' + f(cy3) + '" width="7" height="7" transform="rotate(45 ' + f(cx3 + 3.5) + ' ' + f(cy3 + 3.5) + ')" fill="' + ['#f4efe6', '#2b272b', '#d4af37', '#9a94a0'][cf % 4] + '" stroke="#2a1a0c" stroke-width=".8"/>'; }
+    } else if (suit === 'r') {
       /* mesas lontane */
       for (var i = 0; i < 3; i++) {
         var x0 = -40 + i * 220 + r() * 60, w = 120 + r() * 90, top = hy - 30 - r() * 50;

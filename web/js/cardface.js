@@ -18,26 +18,34 @@
     var body = s === 'W' ? STAR : s === 'J' ? BELL : ICON[s];
     return '<svg viewBox="0 0 24 24" aria-hidden="true"' + (extra || '') + '>' + body + '</svg>';
   }
-  function cartouche(label, s, color) {
-    var two = label.length > 1;
-    return '<rect x="9" y="9" width="40" height="60" rx="9" fill="#f4e6c6" stroke="#3a2414" stroke-width="2.2"/>' +
-      '<text x="29" y="40" text-anchor="middle" font-size="' + (two ? 25 : 30) + '" font-weight="700"' + (two ? ' letter-spacing="-1.2"' : '') + ' fill="#3a2414">' + label + '</text>' +
-      '<g transform="translate(18.5 44) scale(.875)" fill="' + color + '" stroke="#3a2414" stroke-width="1.1">' + (s === 'W' ? STAR : s === 'J' ? BELL : ICON[s]) + '</g>';
+  /* Riquadro d'angolo: numero grande nel colore del seme, bordo dello stesso colore.
+     Maghi e Giullari: riquadro bianco con la lettera scura, per non confonderli con nessun seme. */
+  var TXT = { r: '#b8381f', b: '#2a55a0', g: '#2f7a40', y: '#c98a0c' };
+  function cartouche(label, s) {
+    var two = label.length > 1, special = s === 'W' || s === 'J';
+    var fill = special ? '#fffdf8' : '#f7ecd2', edge = special ? '#2a1a0c' : COL[s], txt = special ? '#2a1a0c' : TXT[s];
+    var out = '<rect x="7" y="7" width="52" height="78" rx="11" fill="' + fill + '" stroke="#2a1a0c" stroke-width="2"/>' +
+      '<rect x="10" y="10" width="46" height="72" rx="8.5" fill="none" stroke="' + edge + '" stroke-width="' + (special ? 1.4 : 3.2) + '"/>' +
+      '<text x="33" y="' + (two ? 46 : 48) + '" text-anchor="middle" font-size="' + (two ? 34 : 41) + '" font-weight="800"' + (two ? ' letter-spacing="-2"' : '') +
+      ' fill="' + txt + '" stroke="#2a1a0c" stroke-width="' + (special ? 0 : 1.1) + '" paint-order="stroke" style="font-family:\'TdmAlegreya\',\'Alegreya\',\'Lora\',Georgia,serif">' + label + '</text>';
+    var ic = s === 'W' ? STAR : s === 'J' ? BELL : ICON[s];
+    out += '<g transform="translate(20.5 54) scale(1.08)" fill="' + (special ? (s === 'W' ? '#7b5cc4' : '#8a8490') : COL[s]) + '" stroke="#2a1a0c" stroke-width="1.1">' + ic + '</g>';
+    return out;
   }
   var cache = {};
   function frameSVG(id) {
     if (cache[id]) return cache[id];
     var s, label, band, color;
-    if (E.isWizard(id)) { s = 'W'; label = 'M'; band = '#2a2262'; color = '#e9c25a'; }
-    else if (E.isJester(id)) { s = 'J'; label = 'G'; band = '#4a2c17'; color = '#e9c25a'; }
-    else { s = E.suitOf(id); label = String(E.valueOf(id)); band = DEEP[s]; color = COL[s]; }
+    if (E.isWizard(id)) { s = 'W'; label = 'M'; band = '#2c1f55'; }
+    else if (E.isJester(id)) { s = 'J'; label = 'G'; band = '#26232a'; }
+    else { s = E.suitOf(id); label = String(E.valueOf(id)); band = DEEP[s]; }
     var out = '<svg class="frame" viewBox="0 0 200 300" aria-hidden="true">' +
       '<path d="M12 1.5h176A10.5 10.5 0 0 1 198.5 12v276a10.5 10.5 0 0 1-10.5 10.5H12A10.5 10.5 0 0 1 1.5 288V12A10.5 10.5 0 0 1 12 1.5ZM14 8a6 6 0 0 0-6 6v272a6 6 0 0 0 6 6h172a6 6 0 0 0 6-6V14a6 6 0 0 0-6-6Z" fill="' + band + '" fill-rule="evenodd"/>' +
       '<rect x="1.5" y="1.5" width="197" height="297" rx="10.5" fill="none" stroke="#2a1a0c" stroke-width="3"/>' +
       '<rect x="8" y="8" width="184" height="284" rx="6" fill="none" stroke="#e9c46a" stroke-width="1.3" opacity=".9"/>';
-    if (s === 'J') for (var k = 0; k < 14; k++) out += '<rect x="' + (14 + k * 13) + '" y="2.5" width="5" height="5" transform="rotate(45 ' + (16.5 + k * 13) + ' 5)" fill="' + ['#C8442B', '#2F5FA8', '#3E8A4F', '#E0A526'][k % 4] + '"/><rect x="' + (14 + k * 13) + '" y="292.5" width="5" height="5" transform="rotate(45 ' + (16.5 + k * 13) + ' 295)" fill="' + ['#E0A526', '#3E8A4F', '#2F5FA8', '#C8442B'][k % 4] + '"/>';
-    if (s === 'W') [[100, 5], [100, 295], [4.8, 150], [195.2, 150]].forEach(function (p) { out += '<g transform="translate(' + (p[0] - 4.5) + ' ' + (p[1] - 4.5) + ') scale(.375)" fill="#e9c25a">' + STAR + '</g>'; });
-    out += cartouche(label, s, color) + '<g transform="rotate(180 100 150)">' + cartouche(label, s, color) + '</g></svg>';
+    if (s === 'J') for (var k = 0; k < 14; k++) out += '<rect x="' + (14 + k * 13) + '" y="2.5" width="5" height="5" transform="rotate(45 ' + (16.5 + k * 13) + ' 5)" fill="' + (k % 2 ? '#f4efe6' : '#8a8490') + '"/><rect x="' + (14 + k * 13) + '" y="292.5" width="5" height="5" transform="rotate(45 ' + (16.5 + k * 13) + ' 295)" fill="' + (k % 2 ? '#8a8490' : '#f4efe6') + '"/>';
+    if (s === 'W') [[100, 5], [100, 295], [4.8, 150], [195.2, 150]].forEach(function (p) { out += '<g transform="translate(' + (p[0] - 4.5) + ' ' + (p[1] - 4.5) + ') scale(.375)" fill="#c9b8ff">' + STAR + '</g>'; });
+    out += cartouche(label, s) + '<g transform="rotate(180 100 150)">' + cartouche(label, s) + '</g></svg>';
     cache[id] = out;
     return out;
   }

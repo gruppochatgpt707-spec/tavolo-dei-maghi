@@ -26,6 +26,14 @@ jobs:
         run: |
           mkdir -p /tmp/peer && cd /tmp/peer && npm init -y >/dev/null && npm install peerjs@1.5.5 --no-audit --no-fund
           mkdir -p "$GITHUB_WORKSPACE/web/vendor" && cp node_modules/peerjs/dist/peerjs.min.js "$GITHUB_WORKSPACE/web/vendor/"
+      - name: Caratteri del gioco (Alegreya, Almendra, Uncial Antiqua)
+        run: |
+          mkdir -p /tmp/fonts && cd /tmp/fonts && npm init -y >/dev/null && npm install @fontsource/alegreya@5 @fontsource/almendra@5 @fontsource/uncial-antiqua@5 --no-audit --no-fund
+          D="$GITHUB_WORKSPACE/web/fonts"
+          for f in alegreya/files/alegreya-latin-400-normal alegreya/files/alegreya-latin-400-italic alegreya/files/alegreya-latin-700-normal alegreya/files/alegreya-latin-800-normal almendra/files/almendra-latin-400-normal almendra/files/almendra-latin-700-normal uncial-antiqua/files/uncial-antiqua-latin-400-normal; do
+            cp "node_modules/@fontsource/$f.woff2" "$D/" || echo "::warning::Carattere mancante: $f"
+          done
+          ls -la "$D"
       - name: Elenco dei file per il gioco senza rete
         run: python3 tools/build.py
       - uses: actions/upload-artifact@v4
@@ -44,6 +52,26 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  store:
+    name: Immagini per il Play Store
+    needs: web
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: web, path: web }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Fotografa le schermate con i caratteri veri
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node tests/store.js
+          cd store && zip -q ../ImmaginiPlayStore.zip *.png
+      - uses: actions/upload-artifact@v4
+        with: { name: store-images, path: ImmaginiPlayStore.zip }
 
   android:
     name: App Android
@@ -181,3 +209,16 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           files: files/*.dmg
+
+  release-store:
+    name: Aggiunge le immagini per il Play Store
+    needs: [store, release]
+    if: always() && needs.store.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: store-images, path: files }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          files: files/ImmaginiPlayStore.zip

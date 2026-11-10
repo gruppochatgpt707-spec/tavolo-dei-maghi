@@ -42,7 +42,7 @@ bgxml.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <colo
 # Schermata d'avvio: legno scuro con l'icona al centro, al posto del logo standard
 for f in glob.glob(str(android / 'res' / 'drawable*' / 'splash.png')):
     im = Image.open(f); w, h = im.size
-    sp = Image.new('RGBA', (w, h), (58, 34, 17, 255))
+    sp = Image.new('RGBA', (w, h), (11, 14, 26, 255))
     side = int(min(w, h) * 0.32)
     ic = icon.resize((side, side), Image.LANCZOS)
     sp.paste(ic, ((w - side) // 2, (h - side) // 2), ic)

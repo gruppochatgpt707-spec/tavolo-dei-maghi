@@ -64,7 +64,7 @@
   }
   function refreshAvatars() {
     var v = S.view;
-    if (v.phase === 'lobby') renderLobby(v); else { renderSeats(v); renderGiro(v); }
+    if (v.phase === 'lobby') renderLobby(v); else { renderSeats(v); renderStrip(v); }
     renderVoice();
   }
 
@@ -246,14 +246,14 @@
 
   setInterval(function () {
     var v = S.view; if (!v) return;
-    var left = timeNow(), gt = $('#giroTime');
-    if (left === null || !(v.phase === 'bid' || v.phase === 'play' || v.phase === 'trump')) { gt.textContent = ''; }
+    var left = timeNow(), gts = $$('.status .tt');
+    if (left === null || !(v.phase === 'bid' || v.phase === 'play' || v.phase === 'trump')) gts.forEach(function (e) { e.textContent = ''; });
     var frac = S.timeTotal ? (left || 0) / S.timeTotal : 0, txt = left === null ? '' : clockText(left);
     if (!$('#bidPanel').hidden) setFuse('#bidFuse', '#bidTime', left === null ? 1 : frac, txt, left);
     if (!$('#trumpPanel').hidden) setFuse('#trumpFuse', '#trumpTime', left === null ? 1 : frac, txt, left);
     if (!$('#ovResult').hidden) $('#resFuse').style.width = (frac * 100) + '%';
     if (left !== null && (v.phase === 'bid' || v.phase === 'play' || v.phase === 'trump')) {
-      gt.textContent = txt; gt.classList.toggle('urgent', left < 10000);
+      gts.forEach(function (e) { e.textContent = txt; e.classList.toggle('urgent', left < 10000); });
       var sec = Math.ceil(left / 1000);
       if (v.turn === v.me && sec <= 5 && sec !== S.tickSec && sec > 0) { S.tickSec = sec; sfx('tick'); }
     }
@@ -299,21 +299,42 @@
   function applyLayoutMode() { document.body.classList.toggle('wide', isWide()); document.body.classList.toggle('land', isLand()); }
   function gameRect() { return $('#game').getBoundingClientRect(); }
   function tableGeom() {
-    var r = $('#table').getBoundingClientRect(), wide = isWide(), land = isLand();
-    return { w: r.width, h: r.height, left: r.left, top: r.top, cx: r.width / 2, cy: r.height * (land ? 0.5 : 0.45), rx: r.width * (wide ? 0.39 : land ? 0.4 : 0.36), ry: r.height * (wide ? 0.37 : land ? 0.36 : 0.36) };
+    var r = $('#table').getBoundingClientRect(), wide = isWide(), land = isLand(), v = S.view;
+    var G = { w: r.width, h: r.height, left: r.left, top: r.top, cx: r.width / 2, cy: r.height * (wide ? 0.47 : land ? 0.5 : 0.46), rx: r.width * (wide ? 0.39 : land ? 0.4 : 0.37), ry: r.height * (wide ? 0.37 : land ? 0.36 : 0.37) };
+    var probe = document.querySelector('.seat .avwrap'); G.av = probe ? probe.offsetHeight : (wide ? 60 : 46);
+    G.yTop = G.av / 2 + 16; G.yBot = G.h - (wide ? 86 : 44);
+    /* sul telefono la parte bassa del tavolo resta libera per la finestra della previsione */
+    if (!wide && !land) G.yBot = Math.min(G.yBot, G.h - Math.min(G.h * 0.42, 260) - 34);
+    if (v && v.players) {
+      var n = v.players.length, hi = -1, lo = 1;
+      for (var k = 1; k < n; k++) { var sn = Math.sin(Math.PI / 2 + k * 2 * Math.PI / n); hi = Math.max(hi, sn); lo = Math.min(lo, sn); }
+      if (hi - lo > 0.1) {
+        var ry = Math.min(G.ry, (G.yBot - G.yTop) / (hi - lo));
+        if (G.cy + ry * hi > G.yBot || G.cy + ry * lo < G.yTop) { G.ry = ry; G.cy = G.yTop - ry * lo; }
+      } else G.cy = Math.max(G.yTop - G.ry * lo, Math.min(G.cy, G.yBot - G.ry * hi));
+    }
+    return G;
   }
   function seatAngle(v, seat) { return Math.PI / 2 + ((seat - v.me + v.players.length) % v.players.length) * 2 * Math.PI / v.players.length; }
   function seatXY(v, i, G) {
     var a = seatAngle(v, i), x = G.cx + G.rx * Math.cos(a), y = G.cy + G.ry * Math.sin(a);
-    var mx = isWide() ? 80 : 50, top = isWide() ? 60 : 46;
-    return { x: Math.max(mx, Math.min(G.w - mx, x)), y: Math.max(top, Math.min(G.h - 70, y)), a: a };
+    var mx = isWide() ? 80 : 48;
+    x = Math.max(mx, Math.min(G.w - mx, x)); y = Math.max(G.yTop, Math.min(G.yBot, y));
+    /* sul telefono il vassoio della briscola sta in alto a sinistra: il posto si sposta per non coprirlo */
+    var tray = $('#tray');
+    if (!isWide() && tray) {
+      var tr = tray.getBoundingClientRect(), tb = tr.bottom - G.top + 34, tx = tr.right - G.left + 44;
+      if (y < tb && x < tx) { if (Math.abs(Math.cos(a)) > 0.5) y = tb; else x = tx; }
+    }
+    return { x: x, y: y, a: a };
   }
   function anchorOf(seat) {
     var g = gameRect(), v = S.view, r;
     if (seat === v.me) { r = $('#handzone').getBoundingClientRect(); return { x: r.left + r.width / 2 - g.left, y: r.top + r.height * 0.35 - g.top }; }
     var el = document.getElementById('seat-' + seat);
+    el = el ? el.querySelector('.avwrap') : document.getElementById('chip-' + seat);
     if (!el) return { x: g.width / 2, y: 0 };
-    r = el.querySelector('.avwrap').getBoundingClientRect();
+    r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2 - g.left, y: r.top + r.height / 2 - g.top };
   }
   function bidOrder(v) {
@@ -354,59 +375,57 @@
         '<div class="tag">' + esc(p.name) + (p.connected ? '' : ' (assente)') + '</div><div class="backs">' + backs + '</div></div>';
     });
     $('#seats').innerHTML = html;
+    $('#rune').style.top = G.cy + 'px';
     drawOrbit(v, G);
   }
   function drawOrbit(v, G) {
-    var rx = G.rx * 0.8, ry = G.ry * 0.8, s = '', n = v.players.length;
-    s += '<ellipse cx="' + G.cx + '" cy="' + G.cy + '" rx="' + rx + '" ry="' + ry + '" fill="none" stroke="#fff1cc" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>';
+    var rx = G.rx * 0.86, ry = G.ry * 0.86, s = '', n = v.players.length;
     for (var k = 0; k < n; k++) {
       var a = Math.PI / 2 + (k + 0.5) * 2 * Math.PI / n, x = G.cx + rx * Math.cos(a), y = G.cy + ry * Math.sin(a);
       var tx = -rx * Math.sin(a), ty = ry * Math.cos(a), ang = Math.atan2(ty, tx) * 180 / Math.PI;
-      s += '<path d="M-7 -6L5 0L-7 6" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')" fill="none" stroke="#fff1cc" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>';
+      s += '<path d="M-7 -6L5 0L-7 6" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')" fill="none" stroke="#e3b455" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
     }
     $('#orbit').innerHTML = s;
   }
 
-  function renderGiro(v) {
-    var n = v.players.length, order = [], start, title = '', info = '', name = function (i) { return i === v.me ? 'tu' : esc(v.players[i].name); };
-    var play = v.phase === 'play' || v.phase === 'trickEnd';
-    start = play ? v.leader : (v.dealer + 1) % n;
-    for (var k = 0; k < n; k++) order.push((start + k) % n);
-    var placed = v.players.filter(function (p) { return p.bid !== null; }).length;
-    var mine = (v.phase === 'bid' || v.phase === 'play' || v.phase === 'trump') && v.turn === v.me;
-    if (v.phase === 'deal') { title = 'Mano ' + v.round; info = (v.dealer === v.me ? 'Distribuisci tu' : name(v.dealer) + ' distribuisce') + ' · prevede per primo ' + name((v.dealer + 1) % n); }
-    else if (v.phase === 'trump') { title = 'Briscola'; info = mine ? 'È uscito un Mago: scegli tu la briscola' : name(v.dealer) + ' sceglie la briscola'; }
-    else if (v.phase === 'bid') { title = 'Previsioni ' + placed + ' di ' + n; info = mine ? 'Tocca a te: quante prese farai?' : 'Sta prevedendo ' + name(v.turn) + ' · previste ' + v.bidSum + ' su ' + v.round; }
-    else if (play) {
-      var done = v.players.reduce(function (a, p) { return a + p.won; }, 0);
-      title = 'Presa ' + Math.min(v.round, done + 1) + ' di ' + v.round;
-      if (v.phase === 'trickEnd') info = (v.trickWinner === v.me ? 'Hai vinto la presa' : name(v.trickWinner) + ' vince la presa');
-      else if (mine) {
-        info = 'Tocca a te';
-        if (v.lead && v.lead.suit && v.hand.some(function (c) { return E.suitOf(c) === v.lead.suit; })) info += ': rispondi a ' + E.SUIT_NAMES[v.lead.suit];
-        else if (v.trick.length === 0) info += ': apri la presa';
-      } else info = 'Tocca a ' + name(v.turn) + (v.trick.length === 0 ? ', che apre la presa' : '');
-    } else { title = 'Mano ' + v.round; info = ''; }
-    $('#giroTitle').textContent = title;
-    $('#giroInfo').innerHTML = info;
-    $('#giro').classList.toggle('mine', mine);
-    var per = $('#giro').clientWidth / n;
-    $('#giro').classList.toggle('compact', per < 110);
-    $('#giro').classList.toggle('tight', per < 70);
-    $('#giroList').innerHTML = order.map(function (i) {
-      var p = v.players[i], cls = 'gchip', st = '';
-      if (play) {
-        var playedIt = v.trick.some(function (e) { return e.p === i; });
-        if (playedIt) cls += ' done'; else if (v.turn === i && v.phase === 'play') cls += ' now';
-      } else if (v.phase === 'bid') {
-        if (p.bid !== null) cls += ' done'; else if (v.turn === i) cls += ' now';
-      } else if (v.phase === 'trump' && i === v.dealer) cls += ' now';
-      if (i === v.me) cls += ' me';
-      var gs = p.bid === null ? '<span class="gs empty" title="non ha ancora previsto">' + (bidOrder(v).indexOf(i) + 1) + '</span>' :
-        '<span class="gs' + (play ? (p.won === p.bid ? ' exact' : p.won > p.bid ? ' over' : '') : '') + '" title="prevede ' + p.bid + '">' + p.bid + '</span>';
-      var gp = play ? '<span class="gp" title="prese fatte">' + p.won + ' pr.</span>' : '';
-      return '<li class="' + cls + '">' + imgTag(p) + '<span class="gn">' + (i === v.me ? 'Tu' : esc(p.name)) + '</span>' + gs + gp + (v.dealer === i ? '<i class="gd" title="Mazziere">M</i>' : '') + '</li>';
-    }).join('');
+  function orderedSeats(v) { var a = [], n = v.players.length; for (var k = 1; k <= n; k++) a.push((v.me + k) % n); return a; }
+  function chipHTML(p, i, v) {
+    var cls = ['chip'], active = (v.phase === 'bid' || v.phase === 'play' || v.phase === 'trump') && v.turn === i;
+    if (active) cls.push('turn');
+    if (i === v.me) cls.push('me');
+    if (!p.connected) cls.push('away');
+    if (p.bid !== null && v.phase !== 'bid') { if (p.won === p.bid) cls.push('exact'); else if (p.won > p.bid) cls.push('over'); }
+    var coin = v.dealer === i ? '<i class="dealer-coin" title="Mazziere">M</i>' : '';
+    var tip = 'prese fatte ' + p.won + ', previste ' + (p.bid === null ? 'ancora nessuna' : p.bid) + ', punti ' + p.score;
+    return '<div class="' + cls.join(' ') + '" id="chip-' + i + '" data-peer="' + esc(p.peerId || '') + '" title="' + tip + '" aria-label="' + esc(i === v.me ? 'Tu' : p.name) + ': ' + tip + '">' +
+      '<span class="c-name"><i class="dot" style="background:' + p.hue + '"></i><em>' + esc(i === v.me ? 'Tu' : p.name) + '</em>' + coin + '</span>' +
+      '<span class="c-tally">' + p.won + '<i>/' + (p.bid === null ? '–' : p.bid) + '</i></span>' +
+      '<span class="c-score">' + p.score + '</span></div>';
+  }
+  function renderStrip(v, prev) {
+    $('#stripBody').innerHTML = orderedSeats(v).map(function (i) { return chipHTML(v.players[i], i, v); }).join('');
+    $('#stripSum').textContent = v.phase === 'deal' ? '' : 'previste ' + v.bidSum + ' su ' + v.round;
+    if (prev && prev.players) v.players.forEach(function (p, i) {
+      if (prev.players[i] && prev.round === v.round && p.won > prev.players[i].won) { var c = document.getElementById('chip-' + i); if (c) c.classList.add('bump'); }
+    });
+  }
+  function renderStatus(v) {
+    var st = $('#status'), name = function (i) { return esc(v.players[i].name); }, html = '', mine = false, tt = false;
+    switch (v.phase) {
+      case 'deal': html = v.dealer === v.me ? 'Distribuisci le carte' : name(v.dealer) + ' distribuisce le carte'; break;
+      case 'trump': if (v.turn !== v.me) { html = name(v.dealer) + ' sceglie la briscola'; tt = true; } break;
+      case 'bid': if (v.turn !== v.me) { html = name(v.turn) + ' sta facendo la previsione'; tt = v.opts.bidSeconds > 0; } break;
+      case 'play':
+        if (v.turn === v.me) {
+          mine = true; tt = v.opts.playSeconds > 0; html = 'Tocca a te';
+          if (v.lead && v.lead.suit && v.hand.some(function (c) { return E.suitOf(c) === v.lead.suit; })) html += ': rispondi a ' + E.SUIT_NAMES[v.lead.suit];
+          else if (v.trick.length === 0) html += ': apri la presa';
+        } else { html = 'Tocca a ' + name(v.turn); tt = v.opts.playSeconds > 0; }
+        break;
+      case 'trickEnd': html = v.trickWinner === v.me ? 'Hai vinto la presa' : name(v.trickWinner) + ' vince la presa'; break;
+    }
+    st.className = 'status' + (mine ? ' mine' : '');
+    st.innerHTML = html ? html + (tt ? '<span class="tt"></span>' : '') : '';
   }
 
   function renderGame(v, prev) {
@@ -414,10 +433,11 @@
     document.body.classList.toggle('crowded', v.players.length >= 5);
     $('#rNow').textContent = v.round; $('#rTot').textContent = v.totalRounds;
     renderTrumpInfo(v, prev);
+    renderStrip(v, prev);
     renderSeats(v);
-    renderGiro(v);
     renderHand(v, prev);
     renderTrick(v, prev);
+    renderStatus(v);
     renderPanels(v, prev);
     runEffects(v, prev);
     if (!$('#ovSheet').hidden) renderSheet();
@@ -428,7 +448,7 @@
 
   var traySig = '';
   function renderTrumpInfo(v, prev) {
-    var dealing = v.phase === 'deal', chip = $('#trumpChip'), label = $('#medLabel'), txt, chipHtml;
+    var dealing = v.phase === 'deal', chip = $('#trumpChip'), label = $('#trayLabel'), txt, chipHtml;
     if (dealing) { txt = ''; chipHtml = ''; }
     else if (v.phase === 'trump') { txt = 'Il mazziere sceglie'; chipHtml = '<span>Briscola da scegliere</span>'; }
     else if (v.trumpSuit) { var nm = E.SUIT_NAMES[v.trumpSuit]; txt = 'Briscola ' + nm; chipHtml = C.icon(v.trumpSuit) + '<span>' + nm + '</span>'; }
@@ -508,7 +528,7 @@
   function trickSlot(v, seat, id) {
     var G = tableGeom(), el = document.querySelector('.tcard'), tw = el ? el.offsetWidth : 70, th = tw * 1.5, a = seatAngle(v, seat);
     var crowded = v.players.length >= 5;
-    var rx = Math.min(G.rx * 0.46, tw * (crowded ? 1.7 : 1.45)), ry = Math.min(G.ry * 0.5, th * (crowded ? 0.82 : 0.62));
+    var rx = Math.min(G.rx * 0.44, tw * (crowded ? 1.7 : 1.45)), ry = Math.min(G.ry * 0.4, th * (crowded ? 0.8 : 0.6));
     return { x: G.cx + rx * Math.cos(a) - tw / 2, y: G.cy + ry * Math.sin(a) - th / 2, r: (cardSeed(id) % 17) - 8 };
   }
   function renderTrick(v, prev) {
@@ -680,7 +700,7 @@
     b.hidden = false; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
     clearTimeout(S.bannerT); S.bannerT = setTimeout(function () { b.hidden = true; }, 2900);
   }
-  function flare() { var t = $('#table'); t.classList.remove('flare'); void t.offsetWidth; t.classList.add('flare'); }
+  function flare() { var t = $('#rune'); t.classList.remove('flare'); void t.offsetWidth; t.classList.add('flare'); }
   function revealHand() { S.dealing = false; $$('.hcard.undealt').forEach(function (e) { e.classList.remove('undealt'); }); }
   function animateDeal(v, oldDealer) {
     var n = v.players.length, step = E.dealStep(v.round, n), k = 0, fx = $('#fx'), g = gameRect();
@@ -1000,6 +1020,7 @@
     ready: function () { send({ t: 'ready' }); },
     rematch: function () { send({ t: 'rematch' }); },
     openSheet: function () { renderSheet(); openOverlay('#ovSheet'); },
+    toggleStrip: function () { $('#strip').classList.toggle('closed'); },
     openVoice: function () { openOverlay('#ovVoice'); renderVoice(); },
     openChat: function () { S.unread = 0; renderChatPip(); renderChat(); openOverlay('#ovChat'); },
     openMenu: function () { $('#exitConfirm').hidden = true; $('#menuList').hidden = false; $('#menuInvite').hidden = !S.view || S.view.solo; openOverlay('#ovMenu'); },
@@ -1091,7 +1112,16 @@
     else if (!PREVIEW && c && fresh(c.at)) html = 'Eri nella partita ' + esc(c.code) + '.<div class="row"><button class="btn ink small" data-a="resumeClient">Rientra</button><button class="btn ghost small" data-a="forget">Dimentica</button></div>';
     box.innerHTML = html; box.hidden = !html;
   }
+  function runeSVG() {
+    var s = '<svg viewBox="0 0 400 400" fill="none" stroke="currentColor" aria-hidden="true">';
+    s += '<circle cx="200" cy="200" r="192" stroke-width="2"/><circle cx="200" cy="200" r="158" stroke-width="1.4"/><circle cx="200" cy="200" r="66" stroke-width="1.2" opacity=".6"/>';
+    var glyphs = ['M0-11V11M0-11L8-3M0-2L8 6', 'M-7 11V-11L7 11V-11', 'M-7-11L7 0L-7 11', 'M0-11V11M-7-5L7 5', 'M-7-11V11M-7 0L7-11M-7 0L7 11', 'M-6-11L6 11M6-11L-6 11', 'M0-11L8 0L0 11L-8 0Z', 'M-7 11V-5L0-11L7-5V11', 'M0-11V11M0-11L-8-4M0-11L8-4'];
+    for (var i = 0; i < 27; i++) s += '<path transform="rotate(' + (i / 27 * 360) + ' 200 200) translate(200 25)" d="' + glyphs[i % glyphs.length] + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
+    for (var j = 0; j < 8; j++) s += '<path transform="rotate(' + (j * 45) + ' 200 200)" d="M200 42L212 134H188Z" stroke-width="1" opacity=".3"/>';
+    return s + '</svg>';
+  }
   function boot() {
+    $('#rune').innerHTML = runeSVG();
     $$('.torn').forEach(tear);
     $('#icChat').innerHTML = ICON.chat; $('#icSheet').innerHTML = ICON.sheet; $('#icRules').innerHTML = ICON.book; $('#icMenu').innerHTML = ICON.menu; $('#icVoice').innerHTML = ICON.mic;
     var fan = [['W2', -30], ['r13', -15], ['y7', 0], ['b5', 15], ['J4', 30]];

@@ -45,7 +45,7 @@
   function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
   function pluckBuf(m) {
     if (plucks[m]) return plucks[m];
-    var sr = ctx.sampleRate, f = mtof(m), dur = Math.max(1.2, 3.2 - (m - 48) * 0.04), n = Math.floor(sr * dur);
+    var sr = ctx.sampleRate, f = mtof(m), dur = Math.max(1.0, 2.6 - (m - 48) * 0.035), n = Math.floor(sr * dur);
     var b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0), N = Math.max(2, Math.round(sr / f)), line = new Float32Array(N), prev = 0, i;
     for (i = 0; i < N; i++) { prev += 0.45 * ((Math.random() * 2 - 1) - prev); line[i] = prev; }
     var rho = 0.9965 + Math.min(0.003, 30 / f * 0.01), p = 0, last = 0, peak = 0;
@@ -144,6 +144,19 @@
       line.forEach(function (n) { if (Math.random() < 0.9) flute(deg(T, n.d, 2), at, n.len * EIGHTH * 0.95, 0.05); at += n.len * EIGHTH; });
     }
   }
+  /* Prepara in anticipo, una corda alla volta, i suoni pizzicati del tema: così il calcolo non rallenta il gioco */
+  var warmQ = [], warmT = null;
+  function warm(theme) {
+    var T = THEMES[theme] || THEMES.none;
+    for (var d = 0; d < 14; d++) [-1, 1].forEach(function (o) { var m = deg(T, d, o); if (!plucks[m] && warmQ.indexOf(m) < 0) warmQ.push(m); });
+    if (warmT) return;
+    var step = function () {
+      warmT = null; if (!warmQ.length || !ctx) return;
+      pluckBuf(warmQ.shift());
+      warmT = (root.requestIdleCallback ? function (f) { return root.requestIdleCallback(f, { timeout: 400 }); } : function (f) { return setTimeout(f, 60); })(step);
+    };
+    warmT = setTimeout(step, 400);
+  }
   function tick() {
     if (!ctx || hidden) return;
     while (M.next < ctx.currentTime + 0.6) { scheduleStep(M.next); M.next += EIGHTH; M.step++; }
@@ -153,10 +166,10 @@
       if (!set.music || M.on) return;
       if (!ensure()) return;
       M.on = true; M.next = ctx.currentTime + 0.3; M.step = 0; M.phrase = -1; M.motif = newMotif();
-      M.timer = setInterval(tick, 120); applyVolumes();
+      M.timer = setInterval(tick, 120); applyVolumes(); warm(M.want);
     },
     stop: function () { M.on = false; clearInterval(M.timer); if (ctx) applyVolumes(); },
-    theme: function (s) { M.want = THEMES[s] ? s : 'none'; },
+    theme: function (s) { M.want = THEMES[s] ? s : 'none'; if (M.on) warm(M.want); },
     get playing() { return M.on; }
   };
 
