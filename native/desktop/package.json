@@ -1,0 +1,48 @@
+{
+  "name": "tavolo-dei-maghi",
+  "productName": "Tavolo dei Maghi",
+  "version": "1.0.0",
+  "description": "Il Tavolo dei Maghi: il gioco di previsioni e prese da giocare con gli amici.",
+  "author": "Tavolo dei Maghi",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "it.tavolodeimaghi.app",
+    "productName": "Tavolo dei Maghi",
+    "copyright": "Tavolo dei Maghi",
+    "files": ["main.js", "web/**/*"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "category": "public.app-category.card-games",
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Il microfono serve solo per la chat vocale con gli altri giocatori.",
+        "CFBundleDevelopmentRegion": "it"
+      }
+    },
+    "dmg": { "artifactName": "TavoloDeiMaghi-mac.dmg" },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Tavolo dei Maghi",
+      "artifactName": "TavoloDeiMaghi-Windows-Setup.exe",
+      "language": "1040"
+    }
+  }
+}

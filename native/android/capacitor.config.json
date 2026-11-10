@@ -1,0 +1,7 @@
+{
+  "appId": "it.tavolodeimaghi.app",
+  "appName": "Tavolo dei Maghi",
+  "webDir": "www",
+  "android": { "backgroundColor": "#3a2211" },
+  "plugins": { "SplashScreen": { "launchShowDuration": 700, "backgroundColor": "#3a2211" } }
+}

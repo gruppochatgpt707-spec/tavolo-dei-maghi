@@ -1,0 +1,10 @@
+node_modules/
+native/android/www/
+native/android/android/
+native/desktop/web/
+native/desktop/dist/
+native/desktop/build/
+dist/
+art/out/
+*.jks
+.DS_Store

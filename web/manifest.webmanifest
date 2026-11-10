@@ -1,0 +1,20 @@
+{
+  "name": "Il Tavolo dei Maghi",
+  "short_name": "Tavolo dei Maghi",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#3a2211",
+  "theme_color": "#4a2c17",
+  "lang": "it",
+  "dir": "ltr",
+  "description": "Il tavolo per giocare a Wizard con gli amici: previsioni a turno, punteggio automatico, chat vocale e carte dipinte a mano.",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

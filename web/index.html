@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4a2c17">
+<meta name="description" content="Il tavolo online per giocare a Wizard con gli amici: previsioni, punteggio automatico e chat vocale.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tavolo dei Maghi">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Il Tavolo dei Maghi</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preload" href="fonts/Lora-Variable.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="inkRough"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter>
+</svg>
+<div id="app">
+
+  <!-- ============ HOME ============ -->
+  <section id="home" class="screen">
+    <div class="home-wrap sheet-paper torn">
+      <div class="home-hero">
+        <h1 class="wordmark">Il Tavolo<br>dei Maghi</h1>
+        <p class="tagline">Prevedi quante prese farai. Indovina e guadagni, sbaglia anche di una e perdi punti.</p>
+        <div class="fan" id="homeFan" aria-hidden="true"></div>
+      </div>
+      <div class="home-form">
+        <div id="previewNote" class="note" hidden>Questa è l'anteprima: puoi provare il gioco contro i giocatori automatici. Per giocare online con gli amici e usare la voce, apri il sito o l'app.</div>
+        <button class="profilechip" data-a="openProfile" id="profileChip" aria-label="Il tuo profilo e le statistiche">
+          <img id="pcAva" alt="">
+          <span><b id="pcName">Il tuo profilo</b><small id="pcSub">Foto, nome e statistiche</small></span>
+        </button>
+        <div id="resumeBox" class="note" hidden></div>
+        <label class="field" for="nameInput">Il tuo nome al tavolo
+          <input id="nameInput" maxlength="14" autocomplete="nickname" placeholder="Come ti chiami?">
+        </label>
+        <button class="btn gold big" data-a="create" id="createBtn">Crea una partita</button>
+        <div class="or" id="orLine"><span>oppure entra con un codice</span></div>
+        <form id="joinForm" class="joinrow" autocomplete="off">
+          <label class="vh" for="codeInput">Codice partita</label>
+          <input id="codeInput" class="codeinput" maxlength="5" placeholder="CODICE" autocapitalize="characters" spellcheck="false">
+          <button class="btn ink" id="joinBtn" type="submit">Entra</button>
+        </form>
+        <div id="homeMsg" class="formmsg" role="alert"></div>
+        <div id="seatChoice" class="seatchoice" hidden></div>
+        <div class="homelinks">
+          <button class="btn ghost" data-a="solo">Prova contro i bot</button>
+          <button class="btn ghost" data-a="rules">Regolamento</button>
+          <button class="btn ghost" data-a="openSettings">Suoni ed effetti</button>
+        </div>
+        <p class="legal">Progetto amatoriale per giocare tra amici, non affiliato all'editore del gioco di carte Wizard. Illustrazioni originali. <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SALA D'ATTESA ============ -->
+  <section id="lobby" class="screen" hidden>
+    <div class="lobby-wrap sheet-paper torn">
+      <header class="lobby-head">
+        <div>
+          <h2>Sala d'attesa</h2>
+          <p class="sub" id="lobbySub">Dai questo codice agli amici: lo inseriscono nella pagina iniziale.</p>
+        </div>
+        <button class="btn ghost small" data-a="exitNow">Esci</button>
+      </header>
+      <div class="codebox" id="codeBox">
+        <div class="codecells" id="codeCells" aria-label="Codice partita"></div>
+        <div class="codeact">
+          <button class="btn ink small" data-a="copyCode">Copia codice</button>
+          <button class="btn ink small" data-a="copyLink">Copia invito</button>
+        </div>
+      </div>
+      <div class="lobby-cols">
+        <div>
+          <h3>Al tavolo <span id="pCount" class="count"></span></h3>
+          <ol id="pList" class="plist"></ol>
+          <p class="hint">L'ordine della lista è il giro in senso orario. Il primo della lista distribuisce per primo.</p>
+          <div class="row" id="seatTools">
+            <button class="btn ghost small" data-a="shuffle">Mescola i posti</button>
+            <button class="btn ghost small" data-a="addBot">Aggiungi un bot</button>
+          </div>
+        </div>
+        <div>
+          <h3>Regole del tavolo</h3>
+          <label class="field inline" for="optBid">Tempo per la previsione
+            <select id="optBid">
+              <option value="30">30 secondi</option>
+              <option value="60">1 minuto</option>
+              <option value="90">1 minuto e mezzo</option>
+              <option value="120">2 minuti</option>
+              <option value="180">3 minuti</option>
+              <option value="0">Senza limite</option>
+            </select>
+          </label>
+          <label class="field inline" for="optPlay">Tempo per giocare una carta
+            <select id="optPlay">
+              <option value="15">15 secondi</option>
+              <option value="30">30 secondi</option>
+              <option value="60">1 minuto</option>
+              <option value="120">2 minuti</option>
+              <option value="0">Senza limite</option>
+            </select>
+          </label>
+          <label class="toggle"><input type="checkbox" id="optPM"><span>Variante Più o meno uno</span></label>
+          <div id="lobbyVoiceBox">
+            <h3>Chat vocale</h3>
+            <button class="btn ink small" data-a="openVoice" id="lobbyVoice">Apri la chat vocale</button>
+            <p class="hint">Se siete in più nella stessa stanza, basta un solo dispositivo in voce.</p>
+          </div>
+        </div>
+      </div>
+      <div class="lobby-foot">
+        <button class="btn ghost" data-a="rules">Regolamento</button>
+        <button class="btn gold big" data-a="start" id="startBtn">Inizia la partita</button>
+        <p id="waitMsg" class="hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PARTITA ============ -->
+  <section id="game" class="screen" hidden>
+    <header class="topbar">
+      <div class="tb-left">
+        <span class="roundlabel">Mano <b id="rNow">1</b> di <span id="rTot">15</span></span>
+        <span class="trumpchip" id="trumpChip"></span>
+      </div>
+      <div class="tb-right">
+        <button class="ic" data-a="openVoice" id="icVoice" aria-label="Chat vocale"></button>
+        <button class="ic" data-a="openChat" id="icChat" aria-label="Messaggi e reazioni"></button>
+        <button class="ic" data-a="openSheet" id="icSheet" aria-label="Registro dei punti"></button>
+        <button class="ic" data-a="rulesSearch" id="icRules" aria-label="Cerca nelle regole"></button>
+        <button class="ic" data-a="openMenu" id="icMenu" aria-label="Menu"></button>
+      </div>
+    </header>
+
+    <main class="table" id="table">
+      <svg class="orbit" id="orbit" aria-hidden="true"></svg>
+      <div id="seats"></div>
+      <div class="medallion" id="medallion">
+        <div class="deckslot" id="deckSlot"></div>
+        <div class="medlabel" id="medLabel"></div>
+      </div>
+      <div id="trick"></div>
+      <div class="banner" id="banner" hidden></div>
+
+      <div class="panel" id="bidPanel" hidden>
+        <div class="panel-h">
+          <h3>Quante prese farai?</h3>
+          <span class="timer-t" id="bidTime"></span>
+        </div>
+        <div class="fuse"><div class="fuse-fill" id="bidFuse"></div></div>
+        <p class="panel-sub" id="bidSub"></p>
+        <div class="bidnums" id="bidNums"></div>
+        <button class="btn gold" data-a="confirmBid" id="bidOk" disabled>Scegli un numero</button>
+      </div>
+
+      <div class="panel" id="trumpPanel" hidden>
+        <div class="panel-h">
+          <h3>Scegli la briscola</h3>
+          <span class="timer-t" id="trumpTime"></span>
+        </div>
+        <div class="fuse"><div class="fuse-fill" id="trumpFuse"></div></div>
+        <p class="panel-sub">È uscito un Mago: da mazziere scegli tu il colore, guardando le tue carte.</p>
+        <div class="gems" id="gems"></div>
+      </div>
+    </main>
+
+    <div class="giro" id="giro" aria-live="polite">
+      <div class="giro-head"><span id="giroTitle"></span><span class="giro-info" id="giroInfo"></span><span class="giro-time" id="giroTime"></span></div>
+      <ol class="giro-list" id="giroList"></ol>
+    </div>
+
+    <div class="handzone" id="handzone">
+      <div id="hand" class="hand"></div>
+    </div>
+
+    <div id="fx" aria-hidden="true"></div>
+    <div id="bubbles" aria-live="polite"></div>
+  </section>
+
+  <!-- ============ FINESTRE ============ -->
+  <div class="overlay" id="ovResult" hidden>
+    <div class="sheet sheet-paper torn" role="dialog" aria-labelledby="resTitle">
+      <h2 id="resTitle"></h2>
+      <div class="restable" id="resTable"></div>
+      <div class="fuse light"><div class="fuse-fill" id="resFuse"></div></div>
+      <div class="resfoot">
+        <span id="resReady" class="hint"></span>
+        <button class="btn gold" data-a="ready" id="readyBtn">Prossima mano</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovEnd" hidden>
+    <div class="sheet sheet-paper torn" role="dialog" aria-labelledby="endTitle">
+      <h2 id="endTitle"></h2>
+      <div id="podium"></div>
+      <p class="hint" id="endStat"></p>
+      <div class="resfoot">
+        <button class="btn ghost" data-a="openSheet">Registro</button>
+        <button class="btn ghost" data-a="exitNow">Esci</button>
+        <button class="btn gold" data-a="rematch" id="rematchBtn">Nuova partita</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovSheet" hidden>
+    <div class="sheet wide sheet-paper torn" role="dialog" aria-labelledby="shTitle">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2 id="shTitle">Registro dei punti</h2>
+      <div class="scoregrid-wrap" id="scoreWrap"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovRules" hidden>
+    <div class="sheet wide sheet-paper torn rules" role="dialog" aria-labelledby="ruTitle">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2 id="ruTitle">Regolamento</h2>
+      <label class="vh" for="ruleSearch">Cerca una regola</label>
+      <input id="ruleSearch" class="search" placeholder="Cerca: giullare, briscola, punti…" autocomplete="off">
+      <div class="quick" id="ruleQuick"></div>
+      <div id="ruleList" class="rulelist"></div>
+    </div>
+  </div>
+
+  <div class="overlay side" id="ovVoice" hidden>
+    <div class="sheet side sheet-paper" role="dialog" aria-labelledby="voTitle">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2 id="voTitle">Chat vocale</h2>
+      <div id="voiceBody"></div>
+    </div>
+  </div>
+
+  <div class="overlay side" id="ovChat" hidden>
+    <div class="sheet side sheet-paper" role="dialog" aria-labelledby="chTitle">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2 id="chTitle">Reazioni e messaggi</h2>
+      <div class="emotes" id="emotes"></div>
+      <div class="chatlog" id="chatLog"></div>
+      <form id="chatForm" class="joinrow">
+        <label class="vh" for="chatInput">Messaggio</label>
+        <input id="chatInput" maxlength="240" placeholder="Scrivi al tavolo" autocomplete="off">
+        <button class="btn ink" type="submit">Invia</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovMenu" hidden>
+    <div class="sheet small sheet-paper torn" role="dialog" aria-label="Menu">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2>Menu</h2>
+      <div class="menulist" id="menuList">
+        <button class="btn ghost" data-a="openSettings">Suoni ed effetti</button>
+        <button class="btn ghost" data-a="openProfile">Profilo e statistiche</button>
+        <button class="btn ghost" data-a="fullscreen" id="fsBtn">Schermo intero</button>
+        <button class="btn ghost" data-a="copyLink" id="menuInvite">Copia invito</button>
+        <button class="btn danger" data-a="askExit">Lascia la partita</button>
+      </div>
+      <div id="exitConfirm" hidden>
+        <p id="exitText"></p>
+        <div class="row"><button class="btn ghost" data-a="close">Resta</button><button class="btn danger" data-a="exitNow">Sì, esci</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovSettings" hidden>
+    <div class="sheet small sheet-paper torn" role="dialog" aria-labelledby="setTitle">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2 id="setTitle">Suoni ed effetti</h2>
+      <label class="toggle"><input type="checkbox" id="setMusic"><span>Colonna sonora</span></label>
+      <label class="range" for="setMusicVol">Volume della musica<input type="range" id="setMusicVol" min="0" max="1" step="0.05"></label>
+      <label class="toggle"><input type="checkbox" id="setSfx"><span>Suoni delle carte e del gioco</span></label>
+      <label class="range" for="setSfxVol">Volume dei suoni<input type="range" id="setSfxVol" min="0" max="1" step="0.05"></label>
+      <label class="toggle"><input type="checkbox" id="setFx"><span>Effetti visivi al tocco</span></label>
+      <label class="toggle"><input type="checkbox" id="setVib"><span>Vibrazione quando tocca a te</span></label>
+      <p class="hint">La musica si abbassa da sola quando sei in chat vocale.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovProfile" hidden>
+    <div class="sheet wide sheet-paper torn" role="dialog" aria-labelledby="prTitle">
+      <button class="x" data-a="close" aria-label="Chiudi">×</button>
+      <h2 id="prTitle">Il tuo profilo</h2>
+      <div class="prof">
+        <div class="prof-left">
+          <img class="prof-ava" id="prAva" alt="La tua immagine del profilo">
+          <label class="field" for="prName">Nome
+            <input id="prName" maxlength="14" autocomplete="nickname" placeholder="Come ti chiami?">
+          </label>
+          <label class="btn ink small filebtn" for="prPhoto">Carica una foto<input type="file" id="prPhoto" accept="image/*"></label>
+          <p class="hint">La foto resta su questo dispositivo e viene mostrata solo agli altri giocatori della tua partita.</p>
+        </div>
+        <div class="prof-right">
+          <h3>Oppure scegli un personaggio</h3>
+          <div class="avgrid" id="avGrid"></div>
+        </div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab on" data-a="statTab" data-k="real" id="tabReal" aria-selected="true">Con giocatori reali</button>
+        <button role="tab" class="tab" data-a="statTab" data-k="bots" id="tabBots" aria-selected="false">Solo contro i bot</button>
+      </div>
+      <div id="statBody"></div>
+      <details class="backup">
+        <summary>Sposta il profilo su un altro dispositivo</summary>
+        <p class="hint">Copia questo testo e incollalo nello stesso riquadro sull'altro dispositivo: porti con te nome, immagine e statistiche.</p>
+        <div class="row"><button class="btn ink small" data-a="exportProfile">Copia il mio profilo</button></div>
+        <label class="vh" for="importBox">Incolla un profilo</label>
+        <textarea id="importBox" rows="2" placeholder="Incolla qui il testo copiato dall'altro dispositivo"></textarea>
+        <div class="row"><button class="btn ghost small" data-a="importProfile">Carica il profilo incollato</button><button class="btn ghost small" data-a="resetStats">Azzera le statistiche</button></div>
+      </details>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovConn" hidden>
+    <div class="sheet small sheet-paper torn">
+      <h2 id="connTitle">Connessione persa</h2>
+      <p id="connText">Provo a ricollegarmi al tavolo…</p>
+      <div class="spinner" aria-hidden="true"></div>
+      <button class="btn ghost" data-a="exitNow">Torna alla pagina iniziale</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovBusy" hidden>
+    <div class="sheet small sheet-paper torn">
+      <h2 id="busyTitle">Un momento</h2>
+      <p id="busyText">Preparo il tavolo…</p>
+      <div class="spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div id="toasts" aria-live="assertive"></div>
+  <button id="audioUnlock" class="btn gold" data-a="unlockAudio" hidden>Tocca per sentire la chat vocale</button>
+</div>
+<script src="js/config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/net.js"></script>
+<script src="js/cardface.js"></script>
+<script src="js/rules-data.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
