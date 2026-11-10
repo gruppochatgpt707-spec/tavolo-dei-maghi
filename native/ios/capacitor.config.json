@@ -1,0 +1,6 @@
+{
+  "appId": "it.tavolodeimaghi.app",
+  "appName": "Tavolo dei Maghi",
+  "webDir": "www",
+  "ios": { "backgroundColor": "#0b0e1a", "contentInset": "never", "allowsLinkPreview": false }
+}

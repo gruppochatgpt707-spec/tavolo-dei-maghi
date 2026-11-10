@@ -40,6 +40,7 @@
           <input id="nameInput" maxlength="14" autocomplete="nickname" placeholder="Come ti chiami?">
         </label>
         <button class="btn gold big" data-a="create" id="createBtn">Crea una partita</button>
+        <button class="btn ink big" data-a="search" id="searchBtn">Cerca giocatori online</button>
         <div class="or" id="orLine"><span>oppure entra con un codice</span></div>
         <form id="joinForm" class="joinrow" autocomplete="off">
           <label class="vh" for="codeInput">Codice partita</label>
@@ -330,6 +331,21 @@
     </div>
   </div>
 
+  <div class="overlay" id="ovSearch" hidden>
+    <div class="sheet small sheet-paper torn" role="dialog" aria-labelledby="searchTitle">
+      <h2 id="searchTitle">Ricerca globale</h2>
+      <p id="searchText">Cerco altri giocatori che stanno cercando una partita in questo momento…</p>
+      <ul class="vlist" id="searchList"></ul>
+      <p class="hint" id="searchHint">Con 3 o più giocatori la partita parte da sola dopo 15 secondi senza nuovi arrivi; in 2 dopo 45 secondi, con un bot in più. Al massimo 6.</p>
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="row">
+        <button class="btn ghost" data-a="searchCancel">Annulla</button>
+        <button class="btn gold" data-a="searchNow" id="searchNow" disabled>Inizia subito</button>
+      </div>
+      <p class="legal">Giocherai con persone che non conosci: la chat vocale resta spenta finché non la attivi tu. Non condividere dati personali.</p>
+    </div>
+  </div>
+
   <div class="overlay" id="ovBusy" hidden>
     <div class="sheet small sheet-paper torn">
       <h2 id="busyTitle">Un momento</h2>
@@ -346,6 +362,7 @@
 <script src="js/net.js"></script>
 <script src="js/cardface.js"></script>
 <script src="js/rules-data.js"></script>
+<script src="js/match.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/fx.js"></script>

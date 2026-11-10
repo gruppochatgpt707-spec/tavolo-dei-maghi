@@ -100,13 +100,13 @@
     return new N.HostCore({ code: code, token: token, out: hostOut, solo: solo, persist: function (d) { if (d) store.set('host', d); else store.del('host'); } });
   }
 
-  function createGame(forcedRetry) {
+  function createGame(forcedRetry, match) {
     var name = nameOrAsk();
     if (!name) return;
     if (PREVIEW) return startSolo(name);
     homeMsg('');
-    busy('Preparo il tavolo', 'Sto creando il codice della partita…');
-    var code = N.makeCode(), token = N.makeToken();
+    busy(match ? 'Partita trovata' : 'Preparo il tavolo', match ? 'Preparo il tavolo per i giocatori trovati…' : 'Sto creando il codice della partita…');
+    var code = match ? match.code : N.makeCode(), token = N.makeToken();
     S.token = token; S.code = code; S.name = name;
     S.core = hostCore(code, token, false);
     makeVoice();
@@ -115,13 +115,62 @@
       unbusy();
       S.core.addPlayer(name, token, p.id, false, PR.get().av);
       S.core.after();
+      if (match) autoStart(match);
     }).catch(function (e) {
       unbusy();
-      var retry = e && e.type === 'unavailable-id' && !forcedRetry;
+      var retry = e && e.type === 'unavailable-id' && !forcedRetry && !match;
       resetSession();
       if (retry) return createGame(true);
       homeMsg(netError(e));
     });
+  }
+  /* Partita nata dalla ricerca globale: parte da sola quando sono arrivati tutti (o dopo 25 secondi) */
+  function autoStart(match) {
+    S.matched = true;
+    var until = Date.now() + 25000;
+    var t = setInterval(function () {
+      if (!S.core || S.core.g) return clearInterval(t);
+      var humans = S.core.players.filter(function (p) { return !p.bot && p.connected; }).length;
+      if (humans < match.humans && Date.now() < until) return;
+      clearInterval(t);
+      for (var k = S.core.players.length; k < 3; k++) send({ t: 'addBot' });
+      send({ t: 'start' });
+    }, 500);
+  }
+
+  /* ------------ Ricerca globale ------------ */
+  function startSearch() {
+    var name = nameOrAsk();
+    if (!name) return;
+    if (PREVIEW) { homeMsg('Dall\'anteprima non si può cercare online. Usa il sito o l\'app.'); return; }
+    homeMsg('');
+    $('#searchList').innerHTML = ''; $('#searchText').textContent = 'Cerco altri giocatori che stanno cercando una partita in questo momento…';
+    $('#searchNow').disabled = true;
+    openOverlay('#ovSearch');
+    S.search = new window.Match.Search({ name: name, av: PR.get().av }, {
+      status: function (st) {
+        if (st.text) { $('#searchText').textContent = st.text; return; }
+        var n = st.n;
+        $('#searchText').textContent = n <= 1 ? 'Per ora ci sei solo tu. Resta in attesa: appena qualcuno cerca, vi metto allo stesso tavolo.' :
+          n + ' giocatori trovati' + (st.left != null ? '. La partita parte tra ' + Math.ceil(st.left / 1000) + ' s' : '') + '.';
+        $('#searchList').innerHTML = st.names.map(function (nm, i) { return '<li><span class="pn">' + esc(nm) + (i === 0 ? '<small>prepara il tavolo</small>' : '') + '</span></li>'; }).join('');
+        $('#searchNow').disabled = n < 2;
+      },
+      go: function (m) {
+        S.search = null;
+        ($('#ovSearch').hidden = true);
+        SND.sfx('good');
+        if (m.host) createGame(true, m);
+        else { S.matched = true; joinMatched(m.code, 0); }
+      }
+    });
+    S.search.start().catch(function (e) { ($('#ovSearch').hidden = true); S.search = null; homeMsg(netError(e)); });
+  }
+  function joinMatched(code, tries) {
+    /* chi prepara il tavolo può metterci un attimo ad aprirlo: riprovo qualche volta */
+    setTimeout(function () {
+      joinGame(code, undefined, function () { if (tries < 4) { joinMatched(code, tries + 1); return true; } return false; });
+    }, tries === 0 ? 1200 : 1500);
   }
   function resumeHost(save) {
     S.name = (save.players.filter(function (p) { return p.token === save.hostToken; })[0] || {}).name || 'Host';
@@ -145,7 +194,7 @@
     S.core.addPlayer(name, token, null, false, PR.get().av);
     send({ t: 'addBot' }); send({ t: 'addBot' }); send({ t: 'addBot' });
   }
-  function joinGame(code, claim) {
+  function joinGame(code, claim, onFail) {
     var name = nameOrAsk();
     if (!name) return;
     if (PREVIEW) { homeMsg('Dall\'anteprima non ci si può collegare ad altri dispositivi. Usa il sito o l\'app.'); return; }
@@ -162,7 +211,7 @@
     S.link = new N.ClientLink(code, msg, { onMessage: onMsg, onCall: function (c) { S.voice.incoming(c); }, onStatus: onLinkStatus });
     S.link.start().then(function () {
       S.joinTimer = setTimeout(function () { if (!S.view) { unbusy(); resetSession(); homeMsg('Il tavolo non ha risposto. Riprova.'); } }, 9000);
-    }).catch(function (e) { unbusy(); resetSession(); homeMsg(netError(e)); });
+    }).catch(function (e) { unbusy(); resetSession(); if (onFail && e && e.type === 'peer-unavailable' && onFail()) return; homeMsg(netError(e)); });
   }
   function onReject(m) {
     clearTimeout(S.joinTimer);
@@ -195,7 +244,7 @@
     if (S.voice && S.voice.on) S.voice.stop();
     if (S.link) { try { S.link.close(); } catch (e) {} }
     if (S.core) { clearTimeout(S.core.t1); clearTimeout(S.core.t2); }
-    S.core = null; S.link = null; S.voice = null; S.view = null; S.token = null; S.code = null;
+    S.core = null; S.link = null; S.voice = null; S.view = null; S.token = null; S.code = null; S.matched = false;
     S.chat = []; S.unread = 0; S.sel = null; S.bidPick = null; S.voiceAskTakeover = null; S.avatars = {};
     $('#trick').innerHTML = ''; $('#hand').innerHTML = ''; $('#fx').innerHTML = ''; $('#seats').innerHTML = '';
     SND.duck(false); SND.music.theme('none');
@@ -289,7 +338,8 @@
     $('#startBtn').hidden = !v.amHost;
     $('#startBtn').disabled = v.players.length < 3;
     $('#startBtn').textContent = v.players.length < 3 ? 'Servono almeno 3 giocatori' : 'Inizia la partita';
-    $('#waitMsg').textContent = v.amHost ? '' : 'In attesa che chi ha creato la partita la faccia iniziare.';
+    $('#waitMsg').textContent = S.matched ? 'Partita trovata con la ricerca globale: inizia da sola appena arrivano tutti.' : v.amHost ? '' : 'In attesa che chi ha creato la partita la faccia iniziare.';
+    if (S.matched) $('#startBtn').hidden = true;
     $('#lobbyVoiceBox').hidden = v.solo;
   }
 
@@ -1014,6 +1064,9 @@
     shuffle: function () { send({ t: 'shuffle' }); },
     addBot: function () { send({ t: 'addBot' }); },
     start: function () { send({ t: 'start' }); },
+    search: function () { startSearch(); },
+    searchNow: function () { if (S.search) S.search.startNow(); },
+    searchCancel: function () { if (S.search) S.search.cancel(); S.search = null; ($('#ovSearch').hidden = true); },
     pickBid: function (b) { S.bidPick = +b.dataset.n; renderBidPanel(S.view); sfx('select'); },
     confirmBid: function () { if (S.bidPick !== null) send({ t: 'bid', n: S.bidPick }); },
     pickTrump: function (b) { send({ t: 'trump', s: b.dataset.s }); $('#gems').innerHTML = ''; },

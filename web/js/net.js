@@ -758,6 +758,6 @@
 
   root.Net = {
     makeCode: makeCode, makeToken: makeToken, cleanName: cleanName, HostCore: HostCore, HostLink: HostLink,
-    ClientLink: ClientLink, Voice: Voice, loadPeerLib: loadPeerLib, PREFIX: PREFIX, PLACES: PLACES, HUES: HUES
+    ClientLink: ClientLink, Voice: Voice, loadPeerLib: loadPeerLib, PREFIX: PREFIX, PLACES: PLACES, HUES: HUES, PEER_OPTS: PEER_OPTS
   };
 })(typeof self !== 'undefined' ? self : this);

@@ -73,6 +73,45 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: store-images, path: ImmaginiPlayStore.zip }
 
+  ios:
+    name: App per iPhone
+    needs: web
+    runs-on: macos-15-intel
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: web, path: web-built }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Xcode 26
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$X" ]; then echo "::error::Su questo computer di GitHub manca Xcode 26"; ls /Applications | grep -i xcode; exit 1; fi
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+      - name: Progetto Capacitor
+        working-directory: native/ios
+        run: |
+          npm install --no-audit --no-fund
+          rm -rf www && cp -r ../../web-built www
+          npx cap add ios
+          python3 -m pip install --quiet --break-system-packages pillow || python3 -m pip install --quiet pillow
+          python3 patch.py . ../icon-1024.png
+          npx cap sync ios
+      - name: Compila (senza firma)
+        working-directory: native/ios/ios/App
+        run: |
+          if [ -d App.xcworkspace ]; then SRC="-workspace App.xcworkspace"; else SRC="-project App.xcodeproj"; fi
+          xcodebuild $SRC -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build MARKETING_VERSION=1.0.${{ github.run_number }} CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -25
+          mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry "$GITHUB_WORKSPACE/TavoloDeiMaghi-iPhone.ipa" Payload
+          ls -la "$GITHUB_WORKSPACE/TavoloDeiMaghi-iPhone.ipa"
+      - uses: actions/upload-artifact@v4
+        with: { name: ios, path: TavoloDeiMaghi-iPhone.ipa }
+
   android:
     name: App Android
     needs: web
@@ -191,6 +230,7 @@ jobs:
             - **Windows**: TavoloDeiMaghi-Windows-Setup.exe
             Il file .aab serve solo per caricare l'app sul Play Store.
             L'app per Mac compare qui qualche minuto dopo le altre.
+            Il file .ipa è l'app per iPhone: si installa con Sideloadly e un ID Apple (vedi la guida).
             Si gioca anche dal browser: https://gruppochatgpt707-spec.github.io/tavolo-dei-maghi/
           files: |
             files/*.apk
@@ -222,3 +262,16 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           files: files/ImmaginiPlayStore.zip
+
+  release-ios:
+    name: Aggiunge l'app per iPhone
+    needs: [ios, release]
+    if: always() && needs.ios.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: ios, path: files }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          files: files/*.ipa
