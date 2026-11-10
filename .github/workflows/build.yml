@@ -121,7 +121,7 @@ jobs:
   mac:
     name: App per Mac
     needs: web
-    runs-on: macos-latest
+    runs-on: macos-15-intel
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
