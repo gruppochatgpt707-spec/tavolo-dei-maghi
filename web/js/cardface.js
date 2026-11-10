@@ -27,7 +27,7 @@
     var out = '<rect x="7" y="7" width="52" height="78" rx="11" fill="' + fill + '" stroke="#2a1a0c" stroke-width="2"/>' +
       '<rect x="10" y="10" width="46" height="72" rx="8.5" fill="none" stroke="' + edge + '" stroke-width="' + (special ? 1.4 : 3.2) + '"/>' +
       '<text x="33" y="' + (two ? 46 : 48) + '" text-anchor="middle" font-size="' + (two ? 34 : 41) + '" font-weight="800"' + (two ? ' letter-spacing="-2"' : '') +
-      ' fill="' + txt + '" stroke="#2a1a0c" stroke-width="' + (special ? 0 : 1.1) + '" paint-order="stroke" style="font-family:\'TdmAlegreya\',\'Alegreya\',\'Lora\',Georgia,serif">' + label + '</text>';
+      ' fill="' + txt + '" stroke="#2a1a0c" stroke-width="' + (special ? 0 : 1.1) + '" paint-order="stroke" style="font-variant-numeric:lining-nums;font-family:\'TdmAlegreya\',\'Alegreya\',\'Lora\',Georgia,serif">' + label + '</text>';
     var ic = s === 'W' ? STAR : s === 'J' ? BELL : ICON[s];
     out += '<g transform="translate(20.5 54) scale(1.08)" fill="' + (special ? (s === 'W' ? '#7b5cc4' : '#8a8490') : COL[s]) + '" stroke="#2a1a0c" stroke-width="1.1">' + ic + '</g>';
     return out;

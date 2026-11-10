@@ -26,7 +26,7 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
-body { background: var(--night-2); color: var(--vellum); font: 17px/1.42 var(--body); -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+body { background: var(--night-2); color: var(--vellum); font: 17px/1.42 var(--body); -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; font-variant-numeric: lining-nums; }
 h1, h2, h3 { font-family: var(--head); font-weight: 700; margin: 0; text-wrap: balance; line-height: 1.15; }
 p { margin: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -436,6 +436,10 @@ body.land .panel { padding: 7px 10px; gap: 5px; }
 body.land .panel-sub { display: none; }
 body.land .seat .tag { font-size: .72rem; }
 body.land .seal { width: 22px; height: 22px; font-size: .82rem; right: -12px; }
+
+/* Numeri sempre dritti e ben leggibili: l'1 non deve sembrare una I */
+.chip .c-tally, .chip .c-score, .seal, .pile b, .bn, .timer-t, .roundlabel, .stat b, .pod .pts, .pod .pos, .status .tt, .codecells span, .dtok, .dealer-coin, .restable, .scoregrid { font-family: var(--body); font-variant-numeric: lining-nums tabular-nums; }
+.chip .c-tally, .seal, .bn, .roundlabel b { font-weight: 700; }
 
 /* Telefoni molto stretti */
 @media (max-width: 374px) { .trumpchip svg + span { display: none; } }
