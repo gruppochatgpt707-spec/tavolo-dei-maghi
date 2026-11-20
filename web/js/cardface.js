@@ -34,10 +34,11 @@
   }
   var cache = {};
   function frameSVG(id) {
-    if (cache[id]) return cache[id];
+    var L = root.I18N ? root.I18N.lang : 'it', ck = id + '|' + L;
+    if (cache[ck]) return cache[ck];
     var s, label, band, color;
-    if (E.isWizard(id)) { s = 'W'; label = 'M'; band = '#2c1f55'; }
-    else if (E.isJester(id)) { s = 'J'; label = 'G'; band = '#26232a'; }
+    if (E.isWizard(id)) { s = 'W'; label = root.I18N ? root.I18N.letter('W') : 'M'; band = '#2c1f55'; }
+    else if (E.isJester(id)) { s = 'J'; label = root.I18N ? root.I18N.letter('J') : 'G'; band = '#26232a'; }
     else { s = E.suitOf(id); label = String(E.valueOf(id)); band = DEEP[s]; }
     var out = '<svg class="frame" viewBox="0 0 200 300" aria-hidden="true">' +
       '<path d="M12 1.5h176A10.5 10.5 0 0 1 198.5 12v276a10.5 10.5 0 0 1-10.5 10.5H12A10.5 10.5 0 0 1 1.5 288V12A10.5 10.5 0 0 1 12 1.5ZM14 8a6 6 0 0 0-6 6v272a6 6 0 0 0 6 6h172a6 6 0 0 0 6-6V14a6 6 0 0 0-6-6Z" fill="' + band + '" fill-rule="evenodd"/>' +
@@ -46,7 +47,7 @@
     if (s === 'J') for (var k = 0; k < 14; k++) out += '<rect x="' + (14 + k * 13) + '" y="2.5" width="5" height="5" transform="rotate(45 ' + (16.5 + k * 13) + ' 5)" fill="' + (k % 2 ? '#f4efe6' : '#8a8490') + '"/><rect x="' + (14 + k * 13) + '" y="292.5" width="5" height="5" transform="rotate(45 ' + (16.5 + k * 13) + ' 295)" fill="' + (k % 2 ? '#8a8490' : '#f4efe6') + '"/>';
     if (s === 'W') [[100, 5], [100, 295], [4.8, 150], [195.2, 150]].forEach(function (p) { out += '<g transform="translate(' + (p[0] - 4.5) + ' ' + (p[1] - 4.5) + ') scale(.375)" fill="#c9b8ff">' + STAR + '</g>'; });
     out += cartouche(label, s) + '<g transform="rotate(180 100 150)">' + cartouche(label, s) + '</g></svg>';
-    cache[id] = out;
+    cache[ck] = out;
     return out;
   }
   function face(id) {

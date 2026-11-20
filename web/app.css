@@ -87,6 +87,12 @@ a { color: inherit; }
 .codeinput { text-transform: uppercase; letter-spacing: .22em; font-family: var(--head); font-weight: 700; text-align: center; }
 .codeinput::placeholder { letter-spacing: .14em; font-weight: 400; }
 .homelinks { display: flex; gap: 8px; flex-wrap: wrap; }
+.langpick { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; font-weight: 400; }
+.langpick button { font: 700 .82rem var(--head); letter-spacing: .04em; color: var(--ink); background: rgba(255, 248, 226, .55); border: 1.5px solid rgba(70, 40, 14, .4); border-radius: 999px; padding: .3em .7em; min-height: 32px; cursor: pointer; }
+.langpick button small { display: none; }
+.langpick button.sel { background: #8f5f1a; border-color: #6b4310; color: #fff8e6; }
+.field .langpick { justify-content: flex-start; margin-top: 2px; }
+.field .langpick button small { display: inline; font-weight: 400; margin-left: .35em; letter-spacing: 0; }
 .homelinks .btn { flex: 1 1 auto; }
 .formmsg { min-height: 1.2em; color: #8f2a18; font-weight: 700; font-size: .98rem; }
 .formmsg:empty { display: none; }

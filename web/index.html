@@ -30,6 +30,7 @@
         <div class="fan" id="homeFan" aria-hidden="true"></div>
       </div>
       <div class="home-form">
+        <div class="langpick" role="group" aria-label="Scegli la lingua" data-langpick></div>
         <div id="previewNote" class="note" hidden>Questa è l'anteprima: puoi provare il gioco contro i giocatori automatici. Per giocare online con gli amici e usare la voce, apri il sito o l'app.</div>
         <button class="profilechip" data-a="openProfile" id="profileChip" aria-label="Il tuo profilo e le statistiche">
           <img id="pcAva" alt="">
@@ -279,6 +280,7 @@
     <div class="sheet small sheet-paper torn" role="dialog" aria-labelledby="setTitle">
       <button class="x" data-a="close" aria-label="Chiudi">×</button>
       <h2 id="setTitle">Suoni ed effetti</h2>
+      <div class="field">Lingua<div class="langpick" role="group" aria-label="Scegli la lingua" data-langpick></div></div>
       <label class="toggle"><input type="checkbox" id="setMusic"><span>Colonna sonora</span></label>
       <label class="range" for="setMusicVol">Volume della musica<input type="range" id="setMusicVol" min="0" max="1" step="0.05"></label>
       <label class="toggle"><input type="checkbox" id="setSfx"><span>Suoni delle carte e del gioco</span></label>
@@ -368,11 +370,14 @@
   <button id="audioUnlock" class="btn gold" data-a="unlockAudio" hidden>Tocca per sentire la chat vocale</button>
 </div>
 <script src="js/config.js"></script>
+<script src="js/i18n-dict.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/relay.js"></script>
 <script src="js/net.js"></script>
 <script src="js/cardface.js"></script>
 <script src="js/rules-data.js"></script>
+<script src="js/rules-i18n.js"></script>
 <script src="js/match.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/audio.js"></script>

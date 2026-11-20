@@ -311,7 +311,8 @@
     else if (g.phase === 'play') { E.applyPlay(g, seat, E.autoPlay(g, seat)); what = 'la carta'; }
     else return;
     if (!p.bot) {
-      this.broadcastRaw({ t: 'toast', text: (expired ? 'Tempo scaduto: ' : p.name + ' è assente: ') + what + (expired ? ' di ' + p.name : '') + ' è stata scelta in automatico.' });
+      var kind = g.phase === 'trump' || what === 'la briscola' ? 'trump' : what === 'la previsione' ? 'bid' : 'card';
+      this.broadcastRaw({ t: 'toast', auto: { expired: !!expired, who: p.name, what: kind }, text: (expired ? 'Tempo scaduto: ' : p.name + ' è assente: ') + what + (expired ? ' di ' + p.name : '') + ' è stata scelta in automatico.' });
     }
     this.after();
   };

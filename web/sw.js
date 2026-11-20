@@ -1,5 +1,5 @@
 /* Funzionamento senza rete: l'app resta installata e gioca contro i bot anche offline. */
-const VERSION = 'tavolo-9ad1d073f5';
+const VERSION = 'tavolo-c3fe7a119d';
 const FILES = [
 "./",
 "app.css",
@@ -96,10 +96,14 @@ const FILES = [
 "js/config.js",
 "js/engine.js",
 "js/fx.js",
+"js/i18n-dict.js",
+"js/i18n.js",
 "js/match.js",
 "js/net.js",
 "js/profile.js",
+"js/relay.js",
 "js/rules-data.js",
+"js/rules-i18n.js",
 "manifest.webmanifest"
 ];
 self.addEventListener('install', e => {

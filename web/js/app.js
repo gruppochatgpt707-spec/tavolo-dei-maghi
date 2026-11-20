@@ -52,14 +52,14 @@
     switch (m.t) {
       case 'state': return applyView(m);
       case 'avatars': S.avatars = m.map || {}; if (S.view) refreshAvatars(); return;
-      case 'toast': return toast(m.text, m.bad);
+      case 'toast': return toast(m.auto ? autoText(m.auto) : I18N.host(m.text), m.bad);
       case 'emote': return showEmote(m.p, m.e);
       case 'chat': return addChat(m.p, m.text);
       case 'reject': return onReject(m);
-      case 'kicked': leave(); return homeMsg('Sei stato tolto dalla sala d\'attesa.');
-      case 'ended': leave(); return homeMsg('Chi ha creato la partita l\'ha chiusa.');
+      case 'kicked': leave(); return homeMsg(T('Sei stato tolto dalla sala d\'attesa.'));
+      case 'ended': leave(); return homeMsg(T('Chi ha creato la partita l\'ha chiusa.'));
       case 'voiceBusy': stopVoiceLocal(); S.voiceAskTakeover = m.name; renderVoice(); return;
-      case 'voiceOff': stopVoiceLocal(); toast(m.by + ' è entrato in voce per il tuo luogo: sei uscito dalla chat vocale.'); return;
+      case 'voiceOff': stopVoiceLocal(); toast(m.by + T(' è entrato in voce per il tuo luogo: sei uscito dalla chat vocale.')); return;
     }
   }
   function refreshAvatars() {
@@ -70,15 +70,15 @@
 
   function netError(e) {
     var t = e && e.type;
-    if (t === 'lib') return 'Non riesco a caricare il modulo di collegamento. Controlla la connessione internet e riprova.';
-    if (t === 'peer-unavailable') return 'Non trovo nessuna partita con questo codice. Controlla le lettere e riprova.';
-    if (t === 'timeout') return 'Il tavolo non risponde. Verifica che chi ha creato la partita abbia la pagina aperta e riprova.';
-    if (t === 'browser-incompatible') return 'Questo browser non supporta il gioco online. Prova con Chrome, Safari o Firefox aggiornati.';
-    return 'Il servizio di collegamento non risponde. Controlla la connessione e riprova tra qualche secondo.';
+    if (t === 'lib') return T('Non riesco a caricare il modulo di collegamento. Controlla la connessione internet e riprova.');
+    if (t === 'peer-unavailable') return T('Non trovo nessuna partita con questo codice. Controlla le lettere e riprova.');
+    if (t === 'timeout') return T('Il tavolo non risponde. Verifica che chi ha creato la partita abbia la pagina aperta e riprova.');
+    if (t === 'browser-incompatible') return T('Questo browser non supporta il gioco online. Prova con Chrome, Safari o Firefox aggiornati.');
+    return T('Il servizio di collegamento non risponde. Controlla la connessione e riprova tra qualche secondo.');
   }
   function nameOrAsk() {
     var n = $('#nameInput').value.trim();
-    if (!n) { homeMsg('Scrivi il tuo nome per sederti al tavolo.'); $('#nameInput').focus(); return null; }
+    if (!n) { homeMsg(T('Scrivi il tuo nome per sederti al tavolo.')); $('#nameInput').focus(); return null; }
     PR.save({ name: n }); renderProfileChip();
     return n;
   }
@@ -105,7 +105,7 @@
     if (!name) return;
     if (PREVIEW) return startSolo(name);
     homeMsg('');
-    busy(match ? 'Partita trovata' : 'Preparo il tavolo', match ? 'Preparo il tavolo per i giocatori trovati…' : 'Sto creando il codice della partita…');
+    busy(match ? T('Partita trovata') : T('Preparo il tavolo'), match ? T('Preparo il tavolo per i giocatori trovati…') : T('Sto creando il codice della partita…'));
     var code = match ? match.code : N.makeCode(), token = N.makeToken();
     S.token = token; S.code = code; S.name = name;
     S.core = hostCore(code, token, false);
@@ -143,7 +143,7 @@
   function startSearch() {
     var name = nameOrAsk();
     if (!name) return;
-    if (PREVIEW) { homeMsg('Dall\'anteprima non si può cercare online. Usa il sito o l\'app.'); return; }
+    if (PREVIEW) { homeMsg(T('Dall\'anteprima non si può cercare online. Usa il sito o l\'app.')); return; }
     homeMsg('');
     var saved = {}; try { saved = JSON.parse(localStorage.getItem('tavolo_search_opts') || '{}'); } catch (e) {}
     $('#sPM').checked = saved.plusMinus !== false; $('#sBlind').checked = saved.blind !== false;
@@ -156,17 +156,17 @@
     var vo = { plusMinus: $('#sPM').checked, blind: $('#sBlind').checked };
     try { localStorage.setItem('tavolo_search_opts', JSON.stringify(vo)); } catch (e) {}
     $('#searchSetup').hidden = true; $('#searchRun').hidden = false;
-    $('#searchList').innerHTML = ''; $('#searchText').textContent = 'Cerco altri giocatori che stanno cercando una partita in questo momento…';
-    var names = [vo.plusMinus ? 'Più o meno uno' : '', vo.blind ? 'Prima mano alla cieca' : ''].filter(Boolean);
-    $('#searchVar').textContent = names.length ? 'Varianti: ' + names.join(', ') + '.' : 'Senza varianti.';
+    $('#searchList').innerHTML = ''; $('#searchText').textContent = T('Cerco altri giocatori che stanno cercando una partita in questo momento…');
+    var names = [vo.plusMinus ? T('Più o meno uno') : '', vo.blind ? T('Prima mano alla cieca') : ''].filter(Boolean);
+    $('#searchVar').textContent = names.length ? T('Varianti: ') + names.join(', ') + '.' : T('Senza varianti.');
     $('#searchNow').disabled = true;
     S.search = new window.Match.Search({ name: name, av: PR.get().av, room: '-pm' + (vo.plusMinus ? 1 : 0) + '-bl' + (vo.blind ? 1 : 0) }, {
       status: function (st) {
         if (st.text) { $('#searchText').textContent = st.text; return; }
         var n = st.n;
-        $('#searchText').textContent = n <= 1 ? 'Per ora ci sei solo tu. Resta in attesa: appena qualcuno cerca, vi metto allo stesso tavolo.' :
-          n + ' giocatori trovati' + (st.left != null ? '. La partita parte tra ' + Math.ceil(st.left / 1000) + ' s' : '') + '.';
-        $('#searchList').innerHTML = st.names.map(function (nm, i) { return '<li><span class="pn">' + esc(nm) + (i === 0 ? '<small>prepara il tavolo</small>' : '') + '</span></li>'; }).join('');
+        $('#searchText').textContent = n <= 1 ? T('Per ora ci sei solo tu. Resta in attesa: appena qualcuno cerca, vi metto allo stesso tavolo.') :
+          n + T(' giocatori trovati') + (st.left != null ? T('. La partita parte tra ') + Math.ceil(st.left / 1000) + ' s' : '') + '.';
+        $('#searchList').innerHTML = st.names.map(function (nm, i) { return '<li><span class="pn">' + esc(nm) + (i === 0 ? T('<small>prepara il tavolo</small>') : '') + '</span></li>'; }).join('');
         $('#searchNow').disabled = n < 2;
       },
       go: function (m) {
@@ -188,7 +188,7 @@
   }
   function resumeHost(save) {
     S.name = (save.players.filter(function (p) { return p.token === save.hostToken; })[0] || {}).name || 'Host';
-    busy('Riapro il tavolo', 'Riprendo la partita ' + save.code + '. Può servire qualche secondo.');
+    busy(T('Riapro il tavolo'), T('Riprendo la partita ') + save.code + '. Può servire qualche secondo.');
     S.token = save.hostToken; S.code = save.code;
     S.core = hostCore(save.code, save.hostToken, false);
     S.core.restore(save);
@@ -211,11 +211,11 @@
   function joinGame(code, claim, onFail) {
     var name = nameOrAsk();
     if (!name) return;
-    if (PREVIEW) { homeMsg('Dall\'anteprima non ci si può collegare ad altri dispositivi. Usa il sito o l\'app.'); return; }
+    if (PREVIEW) { homeMsg(T('Dall\'anteprima non ci si può collegare ad altri dispositivi. Usa il sito o l\'app.')); return; }
     code = code.toUpperCase().trim();
-    if (code.length !== 5) { homeMsg('Il codice è formato da 5 caratteri.'); return; }
+    if (code.length !== 5) { homeMsg(T('Il codice è formato da 5 caratteri.')); return; }
     homeMsg(''); $('#seatChoice').hidden = true;
-    busy('Mi siedo al tavolo', 'Sto cercando la partita ' + code + '…');
+    busy(T('Mi siedo al tavolo'), T('Sto cercando la partita ') + code + '…');
     var saved = store.get('client');
     var token = saved && saved.code === code ? saved.token : N.makeToken();
     S.token = token; S.code = code; S.name = name;
@@ -224,32 +224,32 @@
     if (typeof claim === 'number') msg.claim = claim;
     S.link = new N.ClientLink(code, msg, { onMessage: onMsg, onCall: function (c) { S.voice.incoming(c); }, onStatus: onLinkStatus });
     S.link.start().then(function () {
-      S.joinTimer = setTimeout(function () { if (!S.view) { unbusy(); resetSession(); homeMsg('Il tavolo non ha risposto. Riprova.'); } }, 9000);
+      S.joinTimer = setTimeout(function () { if (!S.view) { unbusy(); resetSession(); homeMsg(T('Il tavolo non ha risposto. Riprova.')); } }, 9000);
     }).catch(function (e) { unbusy(); resetSession(); if (onFail && e && e.type === 'peer-unavailable' && onFail()) return; homeMsg(netError(e)); });
   }
   function onReject(m) {
     clearTimeout(S.joinTimer);
     var code = S.code;
     unbusy(); resetSession();
-    if (m.why === 'full') return homeMsg('Il tavolo è al completo: massimo 6 giocatori.');
-    if (m.why === 'started') return homeMsg('La partita è già iniziata e non ci sono posti liberi.');
+    if (m.why === 'full') return homeMsg(T('Il tavolo è al completo: massimo 6 giocatori.'));
+    if (m.why === 'started') return homeMsg(T('La partita è già iniziata e non ci sono posti liberi.'));
     if (m.why === 'seats') {
-      homeMsg('La partita è già iniziata. Riprendi il posto di chi si è disconnesso:');
+      homeMsg(T('La partita è già iniziata. Riprendi il posto di chi si è disconnesso:'));
       var box = $('#seatChoice');
-      box.innerHTML = m.seats.map(function (s) { return '<button class="btn ink" data-a="claim" data-i="' + s.i + '" data-code="' + esc(code) + '">Riprendi il posto di ' + esc(s.name) + '</button>'; }).join('');
+      box.innerHTML = m.seats.map(function (s) { return '<button class="btn ink" data-a="claim" data-i="' + s.i + '" data-code="' + esc(code) + T('">Riprendi il posto di ') + esc(s.name) + '</button>'; }).join('');
       box.hidden = false;
     }
   }
   function onLinkStatus(st) {
     if (st === 'lost') {
-      $('#connTitle').textContent = 'Connessione persa';
-      $('#connText').textContent = 'Provo a ricollegarmi al tavolo. Il tuo posto resta riservato.';
+      $('#connTitle').textContent = T('Connessione persa');
+      $('#connText').textContent = T('Provo a ricollegarmi al tavolo. Il tuo posto resta riservato.');
       $('#ovConn').hidden = false;
     } else if (st === 'retry') {
-      $('#connText').textContent = 'Il tavolo non risponde ancora. Continuo a provare: chi ha creato la partita deve tenere la pagina aperta.';
+      $('#connText').textContent = T('Il tavolo non risponde ancora. Continuo a provare: chi ha creato la partita deve tenere la pagina aperta.');
     } else if (st === 'online') {
       $('#ovConn').hidden = true;
-      toast('Di nuovo al tavolo.');
+      toast(T('Di nuovo al tavolo.'));
       if (S.voice && S.voice.on) send({ t: 'voice', on: true, muted: S.voice.muted, listen: S.voice.listen, takeover: true });
     }
   }
@@ -330,17 +330,17 @@
   function renderLobby(v) {
     $('#codeCells').innerHTML = v.code.split('').map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('');
     $('#codeBox').hidden = v.solo; $('#lobbySub').hidden = v.solo;
-    $('#pCount').textContent = v.players.length + ' di 6';
+    $('#pCount').textContent = v.players.length + T(' di 6');
     $('#pList').innerHTML = v.players.map(function (p, i) {
       var tag = [];
-      if (i === 0) tag.push('distribuisce per primo');
-      if (p.isHost && !v.solo) tag.push('ha creato la partita');
+      if (i === 0) tag.push(T('distribuisce per primo'));
+      if (p.isHost && !v.solo) tag.push(T('ha creato la partita'));
       if (p.bot) tag.push('bot');
       if (i === v.me) tag.push('tu');
       var tools = '';
       if (v.amHost) {
-        tools = '<button class="mini" data-a="move" data-i="' + i + '" data-d="-1" aria-label="Sposta ' + esc(p.name) + ' su"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-          '<button class="mini" data-a="move" data-i="' + i + '" data-d="1" aria-label="Sposta ' + esc(p.name) + ' giù"' + (i === v.players.length - 1 ? ' disabled' : '') + '>↓</button>';
+        tools = '<button class="mini" data-a="move" data-i="' + i + '" data-d="-1" aria-label="Sposta ' + esc(p.name) + T(' su"') + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+          '<button class="mini" data-a="move" data-i="' + i + '" data-d="1" aria-label="Sposta ' + esc(p.name) + T(' giù"') + (i === v.players.length - 1 ? ' disabled' : '') + '>↓</button>';
         if (!p.isHost) tools += '<button class="mini" data-a="kick" data-i="' + i + '" aria-label="Togli ' + esc(p.name) + '">×</button>';
       }
       return '<li style="--hue:' + p.hue + '">' + imgTag(p) + '<span class="pn">' + esc(p.name) + '<small>' + tag.join(', ') + '</small></span>' + tools + '</li>';
@@ -352,8 +352,8 @@
     $('#optBid').value = String(v.opts.bidSeconds); $('#optBid').disabled = !v.amHost;
     $('#startBtn').hidden = !v.amHost;
     $('#startBtn').disabled = v.players.length < 3;
-    $('#startBtn').textContent = v.players.length < 3 ? 'Servono almeno 3 giocatori' : 'Inizia la partita';
-    $('#waitMsg').textContent = S.matched ? 'Partita trovata con la ricerca globale: inizia da sola appena arrivano tutti.' : v.amHost ? '' : 'In attesa che chi ha creato la partita la faccia iniziare.';
+    $('#startBtn').textContent = v.players.length < 3 ? T('Servono almeno 3 giocatori') : T('Inizia la partita');
+    $('#waitMsg').textContent = S.matched ? T('Partita trovata con la ricerca globale: inizia da sola appena arrivano tutti.') : v.amHost ? '' : T('In attesa che chi ha creato la partita la faccia iniziare.');
     if (S.matched) $('#startBtn').hidden = true;
     $('#lobbyVoiceBox').hidden = v.solo;
   }
@@ -417,7 +417,7 @@
       txt = p.bid;
       if (v.phase !== 'bid' && v.phase !== 'deal' && v.phase !== 'trump') { if (p.won === p.bid) cls += ' exact'; else if (p.won > p.bid) cls += ' over'; }
     }
-    var lab = p.bid === null ? 'previsione non ancora fatta' : 'prevede ' + p.bid;
+    var lab = p.bid === null ? T('previsione non ancora fatta') : 'prevede ' + p.bid;
     return '<span class="' + cls + '" id="seal-' + i + '" title="' + lab + '" aria-label="' + lab + '">' + txt + '</span>';
   }
   function pileHTML(p, i) {
@@ -436,9 +436,9 @@
       var mic = p.voice ? '<i class="mic' + (p.muted ? ' mute' : '') + '">' + (p.muted ? ICON.micoff : ICON.mic) + '</i>' : '';
       var ord = v.phase === 'bid' && p.bid === null && !active ? '' : '';
       html += '<div class="seat' + (active ? ' turn' : '') + (p.connected ? '' : ' away') + (v.peek && v.peek[i] ? (pos.x < G.cx - 4 ? ' pk-r' : ' pk-l') : '') + '" id="seat-' + i + '" data-peer="' + esc(p.peerId || '') + '" style="left:' + pos.x.toFixed(1) + 'px;top:' + pos.y.toFixed(1) + 'px;--hue:' + p.hue + '">' +
-        '<div class="avwrap">' + imgTag(p, 'ava') + sealHTML(p, i, v) + (v.phase !== 'bid' && v.phase !== 'deal' && v.phase !== 'trump' ? pileHTML(p, i) : '') + (v.dealer === i ? '<i class="dtok" title="Mazziere">M</i>' : '') + mic + ord + '</div>' +
-        '<div class="tag">' + esc(p.name) + (p.connected ? '' : ' (assente)') + '</div>' +
-        (v.peek && v.peek[i] ? '<div class="peek card" title="' + esc(E.cardName(v.peek[i])) + '">' + C.face(v.peek[i]) + '</div>' : '<div class="backs">' + backs + '</div>') + '</div>';
+        '<div class="avwrap">' + imgTag(p, 'ava') + sealHTML(p, i, v) + (v.phase !== 'bid' && v.phase !== 'deal' && v.phase !== 'trump' ? pileHTML(p, i) : '') + (v.dealer === i ? '<i class="dtok" title="' + T('Mazziere') + '">' + I18N.letter('D') + '</i>' : '') + mic + ord + '</div>' +
+        '<div class="tag">' + esc(p.name) + (p.connected ? '' : T(' (assente)')) + '</div>' +
+        (v.peek && v.peek[i] ? '<div class="peek card" title="' + esc(cardName(v.peek[i])) + '">' + C.face(v.peek[i]) + '</div>' : '<div class="backs">' + backs + '</div>') + '</div>';
     });
     $('#seats').innerHTML = html;
     $('#rune').style.top = G.cy + 'px';
@@ -454,6 +454,13 @@
     $('#orbit').innerHTML = s;
   }
 
+  /* nomi tradotti di semi e carte, frasi automatiche del tavolo */
+  function suitName(s) { return T(E.SUIT_NAMES[s]); }
+  function cardName(c) { return E.isWizard(c) ? T('Mago') : E.isJester(c) ? T('Giullare') : E.valueOf(c) + ' ' + suitName(E.suitOf(c)); }
+  function autoText(a) {
+    var what = T({ trump: 'la briscola', bid: 'la previsione', card: 'la carta' }[a.what] || 'la carta');
+    return a.expired ? T('Tempo scaduto: {what} di {who} è stata scelta in automatico.', { what: what, who: a.who }) : T('{who} è assente: {what} è stata scelta in automatico.', { what: what, who: a.who });
+  }
   function orderedSeats(v) { var a = [], n = v.players.length; for (var k = 1; k <= n; k++) a.push((v.me + k) % n); return a; }
   function chipHTML(p, i, v) {
     var cls = ['chip'], active = (v.phase === 'bid' || v.phase === 'play' || v.phase === 'trump') && v.turn === i;
@@ -461,16 +468,16 @@
     if (i === v.me) cls.push('me');
     if (!p.connected) cls.push('away');
     if (p.bid !== null && v.phase !== 'bid') { if (p.won === p.bid) cls.push('exact'); else if (p.won > p.bid) cls.push('over'); }
-    var coin = v.dealer === i ? '<i class="dealer-coin" title="Mazziere">M</i>' : '';
-    var tip = 'prese fatte ' + p.won + ', previste ' + (p.bid === null ? 'ancora nessuna' : p.bid) + ', punti ' + p.score;
-    return '<div class="' + cls.join(' ') + '" id="chip-' + i + '" data-peer="' + esc(p.peerId || '') + '" title="' + tip + '" aria-label="' + esc(i === v.me ? 'Tu' : p.name) + ': ' + tip + '">' +
-      '<span class="c-name"><i class="dot" style="background:' + p.hue + '"></i><em>' + esc(i === v.me ? 'Tu' : p.name) + '</em>' + coin + '</span>' +
+    var coin = v.dealer === i ? '<i class="dealer-coin" title="' + T('Mazziere') + '">' + I18N.letter('D') + '</i>' : '';
+    var tip = T('prese fatte ') + p.won + T(', previste ') + (p.bid === null ? T('ancora nessuna') : p.bid) + T(', punti ') + p.score;
+    return '<div class="' + cls.join(' ') + '" id="chip-' + i + '" data-peer="' + esc(p.peerId || '') + '" title="' + tip + '" aria-label="' + esc(i === v.me ? T('Tu') : p.name) + ': ' + tip + '">' +
+      '<span class="c-name"><i class="dot" style="background:' + p.hue + '"></i><em>' + esc(i === v.me ? T('Tu') : p.name) + '</em>' + coin + '</span>' +
       '<span class="c-tally">' + p.won + '<i>/' + (p.bid === null ? '–' : p.bid) + '</i></span>' +
       '<span class="c-score">' + p.score + '</span></div>';
   }
   function renderStrip(v, prev) {
     $('#stripBody').innerHTML = orderedSeats(v).map(function (i) { return chipHTML(v.players[i], i, v); }).join('');
-    $('#stripSum').textContent = v.phase === 'deal' ? '' : 'previste ' + v.bidSum + ' su ' + v.round;
+    $('#stripSum').textContent = v.phase === 'deal' ? '' : T('previste ') + v.bidSum + T(' su ') + v.round;
     if (prev && prev.players) v.players.forEach(function (p, i) {
       if (prev.players[i] && prev.round === v.round && p.won > prev.players[i].won) { var c = document.getElementById('chip-' + i); if (c) c.classList.add('bump'); }
     });
@@ -478,17 +485,17 @@
   function renderStatus(v) {
     var st = $('#status'), name = function (i) { return esc(v.players[i].name); }, html = '', mine = false, tt = false;
     switch (v.phase) {
-      case 'deal': html = v.dealer === v.me ? 'Distribuisci le carte' : name(v.dealer) + ' distribuisce le carte'; break;
-      case 'trump': if (v.turn !== v.me) { html = name(v.dealer) + ' sceglie la briscola'; tt = true; } break;
-      case 'bid': if (v.turn !== v.me) { html = name(v.turn) + ' sta facendo la previsione'; tt = v.opts.bidSeconds > 0; } break;
+      case 'deal': html = v.dealer === v.me ? T('Distribuisci le carte') : name(v.dealer) + T(' distribuisce le carte'); break;
+      case 'trump': if (v.turn !== v.me) { html = name(v.dealer) + T(' sceglie la briscola'); tt = true; } break;
+      case 'bid': if (v.turn !== v.me) { html = name(v.turn) + T(' sta facendo la previsione'); tt = v.opts.bidSeconds > 0; } break;
       case 'play':
         if (v.turn === v.me) {
-          mine = true; tt = v.opts.playSeconds > 0; html = 'Tocca a te';
-          if (v.lead && v.lead.suit && v.hand.some(function (c) { return E.suitOf(c) === v.lead.suit; })) html += ': rispondi a ' + E.SUIT_NAMES[v.lead.suit];
-          else if (v.trick.length === 0) html += ': apri la presa';
-        } else { html = 'Tocca a ' + name(v.turn); tt = v.opts.playSeconds > 0; }
+          mine = true; tt = v.opts.playSeconds > 0; html = T('Tocca a te');
+          if (v.lead && v.lead.suit && v.hand.some(function (c) { return E.suitOf(c) === v.lead.suit; })) html += T(': rispondi a ') + suitName(v.lead.suit);
+          else if (v.trick.length === 0) html += T(': apri la presa');
+        } else { html = T('Tocca a ') + name(v.turn); tt = v.opts.playSeconds > 0; }
         break;
-      case 'trickEnd': html = v.trickWinner === v.me ? 'Hai vinto la presa' : name(v.trickWinner) + ' vince la presa'; break;
+      case 'trickEnd': html = v.trickWinner === v.me ? T('Hai vinto la presa') : name(v.trickWinner) + T(' vince la presa'); break;
     }
     st.className = 'status' + (mine ? ' mine' : '');
     st.innerHTML = html ? html + (tt ? '<span class="tt"></span>' : '') : '';
@@ -516,9 +523,9 @@
   function renderTrumpInfo(v, prev) {
     var dealing = v.phase === 'deal', chip = $('#trumpChip'), label = $('#trayLabel'), txt, chipHtml;
     if (dealing) { txt = ''; chipHtml = ''; }
-    else if (v.phase === 'trump') { txt = 'Il mazziere sceglie'; chipHtml = '<span>Briscola da scegliere</span>'; }
-    else if (v.trumpSuit) { var nm = E.SUIT_NAMES[v.trumpSuit]; txt = 'Briscola ' + nm; chipHtml = C.icon(v.trumpSuit) + '<span>' + nm + '</span>'; }
-    else { txt = v.deckLeft === 0 ? 'Ultima mano: niente briscola' : 'Niente briscola'; chipHtml = '<span>Senza briscola</span>'; }
+    else if (v.phase === 'trump') { txt = T('Il mazziere sceglie'); chipHtml = T('<span>Briscola da scegliere</span>'); }
+    else if (v.trumpSuit) { var nm = suitName(v.trumpSuit); txt = T('Briscola ') + nm; chipHtml = C.icon(v.trumpSuit) + '<span>' + nm + '</span>'; }
+    else { txt = v.deckLeft === 0 ? T('Ultima mano: niente briscola') : T('Niente briscola'); chipHtml = T('<span>Senza briscola</span>'); }
     chip.innerHTML = chipHtml; label.textContent = txt;
     document.documentElement.style.setProperty('--trump', v.trumpSuit && !dealing ? C.color(v.trumpSuit) : 'var(--none)');
     if (!dealing) SND.music.theme(v.trumpSuit || 'none');
@@ -557,7 +564,7 @@
         el.className = 'hcard card'; el.id = 'h-' + c; el.dataset.c = c;
         el.innerHTML = c === 'X' ? C.back() : C.face(c);
         if (c === 'X') el.classList.add('hidden-own');
-        el.setAttribute('aria-label', c === 'X' ? 'La tua carta, coperta: non puoi vederla' : E.cardName(c));
+        el.setAttribute('aria-label', c === 'X' ? T('La tua carta, coperta: non puoi vederla') : cardName(c));
         if (S.dealing) el.classList.add('undealt');
         box.appendChild(el);
       }
@@ -618,7 +625,7 @@
       if (!el) {
         el = document.createElement('div');
         el.className = 'tcard card'; el.id = id; el.dataset.c = e.c;
-        el.innerHTML = C.face(e.c) + '<span class="who">' + esc(e.p === v.me ? 'Tu' : v.players[e.p].name) + '</span>';
+        el.innerHTML = C.face(e.c) + '<span class="who">' + esc(e.p === v.me ? T('Tu') : v.players[e.p].name) + '</span>';
         area.appendChild(el);
       }
       el.style.zIndex = i + 1;
@@ -652,7 +659,7 @@
     var trumpOn = v.phase === 'trump' && v.turn === v.me;
     $('#trumpPanel').hidden = !trumpOn;
     if (trumpOn && !$('#gems').firstChild) {
-      $('#gems').innerHTML = E.SUITS.map(function (s) { return '<button class="gem" data-a="pickTrump" data-s="' + s + '" style="--c:' + C.color(s) + '">' + C.icon(s) + E.SUIT_NAMES[s] + '</button>'; }).join('');
+      $('#gems').innerHTML = E.SUITS.map(function (s) { return '<button class="gem" data-a="pickTrump" data-s="' + s + '" style="--c:' + C.color(s) + '">' + C.icon(s) + suitName(s) + '</button>'; }).join('');
     }
     if (v.phase === 'roundEnd') renderResult(v); else $('#ovResult').hidden = true;
     if (v.phase === 'gameOver') renderEnd(v); else $('#ovEnd').hidden = true;
@@ -664,34 +671,34 @@
     var opts = '';
     for (var n = 0; n <= v.round; n++) {
       var bad = v.forbidden === n;
-      opts += '<button class="bn' + (S.bidPick === n ? ' sel' : '') + '" data-a="pickBid" data-n="' + n + '"' + (bad ? ' disabled aria-label="' + n + ' non consentito"' : '') + '>' + n + '</button>';
+      opts += '<button class="bn' + (S.bidPick === n ? ' sel' : '') + '" data-a="pickBid" data-n="' + n + '"' + (bad ? ' disabled aria-label="' + n + T(' non consentito"') : '') + '>' + n + '</button>';
     }
     $('#bidNums').innerHTML = opts;
     var before = bidOrder(v).filter(function (i) { return v.players[i].bid !== null; }).map(function (i) { return esc(v.players[i].name) + ' ' + v.players[i].bid; });
-    var bits = [v.round + (v.round === 1 ? ' presa in palio' : ' prese in palio')];
-    if (before.length) bits.push('prima di te: ' + before.join(', ') + ' (totale ' + v.bidSum + ')');
-    else bits.push('prevedi per primo');
-    if (v.forbidden !== null) bits.push('con la variante non puoi dire ' + v.forbidden);
-    if (v.peek) bits.unshift('<b>Alla cieca:</b> la tua carta è coperta, guarda quelle degli altri');
+    var bits = [v.round + (v.round === 1 ? T(' presa in palio') : T(' prese in palio'))];
+    if (before.length) bits.push(T('prima di te: ') + before.join(', ') + T(' (totale ') + v.bidSum + ')');
+    else bits.push(T('prevedi per primo'));
+    if (v.forbidden !== null) bits.push(T('con la variante non puoi dire ') + v.forbidden);
+    if (v.peek) bits.unshift(T('<b>Alla cieca:</b> la tua carta è coperta, guarda quelle degli altri'));
     $('#bidSub').innerHTML = bits.join(' · ');
     var ok = $('#bidOk');
     ok.disabled = S.bidPick === null;
-    ok.textContent = S.bidPick === null ? 'Scegli un numero' : 'Prevedo ' + S.bidPick + (S.bidPick === 1 ? ' presa' : ' prese');
+    ok.textContent = S.bidPick === null ? T('Scegli un numero') : T('Prevedo ') + S.bidPick + (S.bidPick === 1 ? T(' presa') : T(' prese'));
   }
   function renderResult(v) {
     var h = v.history[v.history.length - 1], entering = $('#ovResult').hidden;
-    $('#resTitle').textContent = 'Mano ' + h.round + ' conclusa';
-    var html = '<span class="th">Giocatore</span><span class="th num">Previste</span><span class="th num">Fatte</span><span class="th num">Punti</span><span class="th num">Totale</span>';
+    $('#resTitle').textContent = T('Mano ') + h.round + T(' conclusa');
+    var html = T('<span class="th">Giocatore</span><span class="th num">Previste</span><span class="th num">Fatte</span><span class="th num">Punti</span><span class="th num">Totale</span>');
     v.players.forEach(function (p, i) {
       var d = h.deltas[i];
-      html += '<div class="resrow" style="--i:' + (entering ? i : 0) + '"><span class="n">' + imgTag(p) + '<span>' + esc(i === v.me ? 'Tu' : p.name) + '</span></span><span class="num">' + h.bids[i] + '</span><span class="num">' + h.won[i] + '</span><span class="num ' + (d >= 0 ? 'up' : 'down') + '">' + (d > 0 ? '+' : '') + d + '</span><span class="num"><b>' + h.totals[i] + '</b></span></div>';
+      html += '<div class="resrow" style="--i:' + (entering ? i : 0) + '"><span class="n">' + imgTag(p) + '<span>' + esc(i === v.me ? T('Tu') : p.name) + '</span></span><span class="num">' + h.bids[i] + '</span><span class="num">' + h.won[i] + '</span><span class="num ' + (d >= 0 ? 'up' : 'down') + '">' + (d > 0 ? '+' : '') + d + '</span><span class="num"><b>' + h.totals[i] + '</b></span></div>';
     });
     $('#resTable').innerHTML = html;
     var humans = v.players.filter(function (p) { return !p.bot && p.connected; }), ready = humans.filter(function (p) { return p.ready; }).length;
-    $('#resReady').textContent = humans.length > 1 ? 'Pronti: ' + ready + ' su ' + humans.length : '';
+    $('#resReady').textContent = humans.length > 1 ? T('Pronti: ') + ready + T(' su ') + humans.length : '';
     var me = v.players[v.me], last = v.round >= v.totalRounds;
     $('#readyBtn').disabled = me.ready;
-    $('#readyBtn').textContent = me.ready ? 'In attesa degli altri' : last ? 'Vedi la classifica' : 'Prossima mano';
+    $('#readyBtn').textContent = me.ready ? T('In attesa degli altri') : last ? T('Vedi la classifica') : T('Prossima mano');
     $('#ovResult').hidden = false;
     if (entering) {
       var good = h.bids[v.me] === h.won[v.me];
@@ -701,18 +708,18 @@
   }
   function renderEnd(v) {
     var entering = $('#ovEnd').hidden, w = v.winners, names = w.map(function (i) { return i === v.me ? 'tu' : v.players[i].name; });
-    $('#endTitle').textContent = w.length > 1 ? 'Parità! Vincono ' + names.join(' e ') : (w[0] === v.me ? 'Hai vinto!' : 'Ha vinto ' + names[0]);
+    $('#endTitle').textContent = w.length > 1 ? T('Parità! Vincono ') + names.join(' e ') : (w[0] === v.me ? T('Hai vinto!') : T('Ha vinto ') + names[0]);
     var ranking = v.players.map(function (p, i) { return { p: p, i: i }; }).sort(function (a, b) { return b.p.score - a.p.score; }), pos = 0, lastS = null;
     $('#podium').innerHTML = ranking.map(function (r, k) {
       if (r.p.score !== lastS) { pos = k + 1; lastS = r.p.score; }
-      return '<div class="pod' + (pos === 1 ? ' first' : '') + '"><span class="pos">' + pos + '</span>' + imgTag(r.p) + '<span class="n">' + esc(r.i === v.me ? 'Tu' : r.p.name) + '</span><span class="pts">' + r.p.score + '</span></div>';
+      return '<div class="pod' + (pos === 1 ? ' first' : '') + '"><span class="pos">' + pos + '</span>' + imgTag(r.p) + '<span class="n">' + esc(r.i === v.me ? T('Tu') : r.p.name) + '</span><span class="pts">' + r.p.score + '</span></div>';
     }).join('');
     $('#rematchBtn').hidden = !v.amHost;
     $('#ovEnd').hidden = false;
     if (entering) {
       store.del('host'); store.del('client');
       var rec = PR.recordGame(v);
-      $('#endStat').textContent = rec ? 'Partita salvata nelle tue statistiche ' + (rec.real ? 'con giocatori reali.' : 'contro i bot.') : '';
+      $('#endStat').textContent = rec ? T('Partita salvata nelle tue statistiche ') + (rec.real ? T('con giocatori reali.') : T('contro i bot.')) : '';
       sfx('end');
       var g = gameRect();
       [0, 350, 800, 1300].forEach(function (t, i) { setTimeout(function () { burst(g.width * (0.25 + i * 0.17), g.height * (0.28 + (i % 2) * 0.16), ['#ffe9ad', '#4b9be0', '#e8552f', '#4fb56a'][i], 30); }, t); });
@@ -765,7 +772,7 @@
   function showBanner(v) {
     var b = $('#banner'), n = v.players.length, nm = function (i) { return i === v.me ? 'tu' : esc(v.players[i].name); };
     var cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
-    b.innerHTML = '<h3>Mano ' + v.round + ' di ' + v.totalRounds + '</h3><p>' + v.round + (v.round === 1 ? ' carta' : ' carte') + ' a testa</p><p>Mazziere: <b>' + nm(v.dealer) + '</b></p><p>' + cap(nm((v.dealer + 1) % n)) + ' ' + ((v.dealer + 1) % n === v.me ? 'prevedi' : 'prevede') + ' per primo</p>';
+    b.innerHTML = T('<h3>Mano ') + v.round + T(' di ') + v.totalRounds + '</h3><p>' + v.round + (v.round === 1 ? T(' carta') : T(' carte')) + T(' a testa</p><p>Mazziere: <b>') + nm(v.dealer) + '</b></p><p>' + cap(nm((v.dealer + 1) % n)) + ' ' + ((v.dealer + 1) % n === v.me ? 'prevedi' : 'prevede') + T(' per primo</p>');
     b.hidden = false; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
     clearTimeout(S.bannerT); S.bannerT = setTimeout(function () { b.hidden = true; }, 2900);
   }
@@ -837,7 +844,7 @@
   function flashTitle() {
     clearInterval(titleT);
     var on = false;
-    titleT = setInterval(function () { on = !on; document.title = on ? 'Tocca a te!' : baseTitle; if (!document.hidden) { clearInterval(titleT); document.title = baseTitle; } }, 900);
+    titleT = setInterval(function () { on = !on; document.title = on ? T('Tocca a te!') : baseTitle; if (!document.hidden) { clearInterval(titleT); document.title = baseTitle; } }, 900);
   }
   function showEmote(p, e) {
     if (!S.view) return;
@@ -881,7 +888,7 @@
   var drag = null;
   function canPlay(id) { var v = S.view; return v && v.phase === 'play' && v.turn === v.me && v.legal.indexOf(id) >= 0; }
   function playCard(id) { S.sel = null; send({ t: 'play', c: id }); }
-  function explainIllegal() { var v = S.view; if (v && v.lead && v.lead.suit) toast('Devi rispondere a ' + E.SUIT_NAMES[v.lead.suit] + ', oppure giocare un Mago o un Giullare.', true); }
+  function explainIllegal() { var v = S.view; if (v && v.lead && v.lead.suit) toast(T('Devi rispondere a ') + suitName(v.lead.suit) + T(', oppure giocare un Mago o un Giullare.'), true); }
   function shake(el) { el.classList.add('shake'); setTimeout(function () { el.classList.remove('shake'); }, 340); }
   $('#hand').addEventListener('pointerdown', function (e) {
     var el = e.target.closest('.hcard');
@@ -919,14 +926,14 @@
 
   /* ------------ Registro ------------ */
   function renderSheet() {
-    var v = S.view; if (!v || !v.players || !v.round) { $('#scoreWrap').innerHTML = '<p>Il registro si riempie quando inizia la partita.</p>'; return; }
-    var head = '<tr><th>Mano</th>' + v.players.map(function (p, i) { return '<th>' + imgTag(p) + esc(i === v.me ? 'Tu' : p.name) + '</th>'; }).join('') + '</tr>', rows = '';
+    var v = S.view; if (!v || !v.players || !v.round) { $('#scoreWrap').innerHTML = T('<p>Il registro si riempie quando inizia la partita.</p>'); return; }
+    var head = T('<tr><th>Mano</th>') + v.players.map(function (p, i) { return '<th>' + imgTag(p) + esc(i === v.me ? T('Tu') : p.name) + '</th>'; }).join('') + '</tr>', rows = '';
     for (var r = 1; r <= v.totalRounds; r++) {
       var h = v.history[r - 1], cur = !h && r === v.round;
       rows += '<tr' + (cur ? ' class="cur"' : '') + '><th>' + r + '</th>';
       v.players.forEach(function (p, i) {
-        if (h) rows += '<td><span class="' + (h.bids[i] === h.won[i] ? 'ok' : 'ko') + '">' + h.totals[i] + '</span><span class="pv">previste ' + h.bids[i] + ', fatte ' + h.won[i] + '</span></td>';
-        else if (cur) rows += '<td><span class="pv">' + (p.bid === null ? '–' : 'previste ' + p.bid) + '</span></td>';
+        if (h) rows += '<td><span class="' + (h.bids[i] === h.won[i] ? 'ok' : 'ko') + '">' + h.totals[i] + T('</span><span class="pv">previste ') + h.bids[i] + T(', fatte ') + h.won[i] + '</span></td>';
+        else if (cur) rows += '<td><span class="pv">' + (p.bid === null ? '–' : T('previste ') + p.bid) + '</span></td>';
         else rows += '<td></td>';
       });
       rows += '</tr>';
@@ -943,7 +950,7 @@
   function renderRules(q) {
     var terms = norm(q || '').split(/\s+/).filter(function (t) { return t.length > 1; }), re = terms.length ? hiRegex(terms) : null;
     var hi = function (s) { var e = esc(s); return re ? e.replace(re, '<mark>$1</mark>') : e; }, html = '', found = 0;
-    window.RULES.forEach(function (sec) {
+    ((window.RULES_I18N && window.RULES_I18N[I18N.lang]) || window.RULES).forEach(function (sec) {
       var items = sec.items.filter(function (it) { if (!terms.length) return true; var hay = norm(sec.sec + ' ' + it.t + ' ' + it.a + ' ' + it.k); return terms.every(function (t) { return hay.indexOf(t) >= 0; }); });
       if (!items.length) return;
       found += items.length;
@@ -952,9 +959,34 @@
         return '<div class="ruleitem"><b>' + hi(it.t) + '</b>' + hi(it.a) + cards + '</div>';
       }).join('') + '</section>';
     });
-    $('#ruleList').innerHTML = found ? html : '<p class="empty">Nessuna regola trovata per questa ricerca. Prova con una parola sola, come «giullare» o «punti».</p>';
+    $('#ruleList').innerHTML = found ? html : T('<p class="empty">Nessuna regola trovata per questa ricerca. Prova con una parola sola, come «giullare» o «punti».</p>');
   }
-  var QUICK = ['Giullare', 'Mago', 'Briscola', 'Seguire il colore', 'Punti', 'Mazziere', 'Ultima mano', 'Variante', 'Tempo', 'Connessione', 'Voce'];
+  function renderQuick() {
+    $('#ruleQuick').innerHTML = ['Giullare', 'Mago', 'Briscola', 'Seguire il colore', 'Punti', 'Mazziere', 'Ultima mano', 'Variante', 'Tempo', 'Connessione', 'Voce'].map(function (k) { var q = esc(T(k)); return '<button data-a="quickRule" data-q="' + q + '">' + q + '</button>'; }).join('');
+  }
+  function renderLangPick() {
+    $$('[data-langpick]').forEach(function (box) {
+      box.innerHTML = I18N.LANGS.map(function (l) { return '<button type="button" data-a="lang" data-l="' + l + '" lang="' + l + '" title="' + I18N.NAMES[l] + '" aria-pressed="' + (l === I18N.lang) + '" class="' + (l === I18N.lang ? 'sel' : '') + '">' + l.toUpperCase() + '<small>' + I18N.NAMES[l] + '</small></button>'; }).join('');
+    });
+  }
+  /* cambio di lingua: si ridisegna tutto ciò che è già sullo schermo */
+  function onLangChange() {
+    renderLangPick(); renderQuick(); renderProfileChip(); renderResumeBox(); renderHomeFan();
+    if (!$('#ovRules').hidden) renderRules($('#ruleSearch').value);
+    if (!$('#ovProfile').hidden) renderProfile();
+    var v = S.view;
+    if (v) {
+      if (v.phase === 'lobby') renderLobby(v);
+      else {
+        $$('#hand .hcard').forEach(function (el) { var c = el.dataset.c; if (c !== 'X') { el.innerHTML = C.face(c); el.setAttribute('aria-label', cardName(c)); } else el.setAttribute('aria-label', T('La tua carta, coperta: non puoi vederla')); });
+        $$('#trick .tcard').forEach(function (el) { var w = el.querySelector('.who'); el.innerHTML = C.face(el.dataset.c) + (w ? w.outerHTML : ''); });
+        $('#gems').innerHTML = ''; traySig = ''; S.bidSig = null;
+        renderGame(v, v);
+      }
+      renderVoice(); renderVoiceIcon(); renderChat();
+    }
+  }
+  window.addEventListener('langchange', onLangChange);
 
   /* ------------ Chat vocale ------------ */
   function renderVoiceIcon() {
@@ -970,23 +1002,23 @@
     var box = $('#voiceBody'), v = S.view;
     if ($('#ovVoice').hidden || !v) return;
     var vc = S.voice, on = vc && vc.on, me = v.players[v.me], html = '';
-    if (S.voiceAskTakeover) html += '<div class="note">' + esc(S.voiceAskTakeover) + ' è già in voce per il luogo ' + me.place + '. Vuoi prendere il suo posto?<div class="row"><button class="btn ink small" data-a="voiceTake">Prendi il suo posto</button><button class="btn ghost small" data-a="voiceCancel">Annulla</button></div></div>';
-    if (!on) html += '<p>Entra solo con il dispositivo che deve parlare e ascoltare per il vostro gruppo.</p><button class="btn gold big" data-a="voiceJoin">Entra nella chat vocale</button>';
+    if (S.voiceAskTakeover) html += '<div class="note">' + esc(S.voiceAskTakeover) + T(' è già in voce per il luogo ') + me.place + T('. Vuoi prendere il suo posto?<div class="row"><button class="btn ink small" data-a="voiceTake">Prendi il suo posto</button><button class="btn ghost small" data-a="voiceCancel">Annulla</button></div></div>');
+    if (!on) html += T('<p>Entra solo con il dispositivo che deve parlare e ascoltare per il vostro gruppo.</p><button class="btn gold big" data-a="voiceJoin">Entra nella chat vocale</button>');
     else {
-      html += '<p>' + (vc.listen ? 'Sei in solo ascolto: il microfono non è disponibile.' : vc.muted ? 'Il microfono è spento: gli altri non ti sentono.' : 'Sei in voce: gli altri ti sentono.') + '</p><div class="row">';
-      if (!vc.listen) html += '<button class="btn ' + (vc.muted ? 'gold' : 'ink') + '" data-a="voiceMute">' + (vc.muted ? 'Riaccendi il microfono' : 'Spegni il microfono') + '</button>';
-      html += '<button class="btn danger" data-a="voiceLeave">Esci dalla voce</button></div>';
+      html += '<p>' + (vc.listen ? T('Sei in solo ascolto: il microfono non è disponibile.') : vc.muted ? T('Il microfono è spento: gli altri non ti sentono.') : T('Sei in voce: gli altri ti sentono.')) + '</p><div class="row">';
+      if (!vc.listen) html += '<button class="btn ' + (vc.muted ? 'gold' : 'ink') + '" data-a="voiceMute">' + (vc.muted ? T('Riaccendi il microfono') : T('Spegni il microfono')) + '</button>';
+      html += T('<button class="btn danger" data-a="voiceLeave">Esci dalla voce</button></div>');
     }
-    html += '<h3>Dove ti trovi?</h3><p class="hint">Chi è nello stesso posto sceglie la stessa lettera: un solo dispositivo per luogo può stare in voce, così l\'audio non si accavalla.</p><div class="placepick">' +
-      N.PLACES.split('').map(function (l) { return '<button class="' + (me.place === l ? 'sel' : '') + '" data-a="place" data-l="' + l + '" aria-label="Luogo ' + l + '">' + l + '</button>'; }).join('') + '</div>';
-    html += '<h3>Al tavolo</h3><ul class="vlist">' + v.players.map(function (p, i) {
+    html += T('<h3>Dove ti trovi?</h3><p class="hint">Chi è nello stesso posto sceglie la stessa lettera: un solo dispositivo per luogo può stare in voce, così l\'audio non si accavalla.</p><div class="placepick">') +
+      N.PLACES.split('').map(function (l) { return '<button class="' + (me.place === l ? 'sel' : '') + '" data-a="place" data-l="' + l + '" aria-label="' + T('Luogo {l}', { l: l }) + '">' + l + '</button>'; }).join('') + '</div>';
+    html += T('<h3>Al tavolo</h3><ul class="vlist">') + v.players.map(function (p, i) {
       if (p.bot) return '';
       var isMe = i === v.me, st;
-      if (!p.connected) st = 'assente'; else if (!p.voice) st = 'non in voce'; else if (p.listen) st = 'in ascolto'; else if (p.muted) st = 'microfono spento'; else st = 'in voce';
-      if (p.voice && !isMe && on && vc.peerState(p.peerId) === 'connecting') st = 'mi sto collegando…';
+      if (!p.connected) st = T('assente'); else if (!p.voice) st = T('non in voce'); else if (p.listen) st = T('in ascolto'); else if (p.muted) st = T('microfono spento'); else st = T('in voce');
+      if (p.voice && !isMe && on && vc.peerState(p.peerId) === 'connecting') st = T('mi sto collegando…');
       var mute = '';
-      if (p.voice && !isMe && on) mute = '<button class="btn ghost small" data-a="peerMute" data-p="' + esc(p.peerId) + '">' + (vc.volumes[p.peerId] ? 'Riattiva' : 'Silenzia') + '</button>';
-      return '<li data-peer="' + esc(p.peerId || '') + '">' + imgTag(p) + '<span class="pn">' + esc(isMe ? 'Tu' : p.name) + '<small>Luogo ' + p.place + ', ' + st + '</small></span>' + mute + '</li>';
+      if (p.voice && !isMe && on) mute = '<button class="btn ghost small" data-a="peerMute" data-p="' + esc(p.peerId) + '">' + (vc.volumes[p.peerId] ? T('Riattiva') : T('Silenzia')) + '</button>';
+      return '<li data-peer="' + esc(p.peerId || '') + '">' + imgTag(p) + '<span class="pn">' + esc(isMe ? T('Tu') : p.name) + T('<small>Luogo ') + p.place + ', ' + st + '</small></span>' + mute + '</li>';
     }).join('') + '</ul>';
     box.innerHTML = html;
     applySpeaking(S.speaking);
@@ -1007,8 +1039,8 @@
     }
     var go = function () { vc.on = true; vc.startMeters(); send({ t: 'voice', on: true, muted: false, listen: vc.listen, takeover: !!takeover }); renderVoice(); renderVoiceIcon(); SND.duck(true); };
     vc.acquire().then(go).catch(function (err) {
-      if (err && err.name === 'NoSecure') { toast('La voce funziona solo su un sito con indirizzo https.', true); return; }
-      vc.silentStream(); toast('Microfono non disponibile: entri in solo ascolto.', true); go();
+      if (err && err.name === 'NoSecure') { toast(T('La voce funziona solo su un sito con indirizzo https.'), true); return; }
+      vc.silentStream(); toast(T('Microfono non disponibile: entri in solo ascolto.'), true); go();
     });
   }
   setInterval(function () { if (S.voice && S.voice.on && S.view) S.voice.reconcile(S.view.players); }, 4000);
@@ -1017,9 +1049,9 @@
   function renderProfileChip() {
     var p = PR.get();
     $('#pcAva').src = PR.avatarURL(p.av);
-    $('#pcName').textContent = p.name || 'Il tuo profilo';
+    $('#pcName').textContent = p.name || T('Il tuo profilo');
     var st = PR.stats(), g = st.real.games + st.bots.games;
-    $('#pcSub').textContent = g ? g + (g === 1 ? ' partita giocata' : ' partite giocate') + ' · ' + (st.real.wins + st.bots.wins) + ' vinte' : 'Foto, nome e statistiche';
+    $('#pcSub').textContent = g ? g + (g === 1 ? T(' partita giocata') : T(' partite giocate')) + ' · ' + (st.real.wins + st.bots.wins) + T(' vinte') : T('Foto, nome e statistiche');
     if (!$('#nameInput').value && p.name) $('#nameInput').value = p.name;
   }
   function pct(a, b) { return b ? Math.round(a / b * 100) + '%' : '–'; }
@@ -1027,14 +1059,14 @@
     var p = PR.get(), st = PR.stats(), c = st[S.statTab];
     $('#prAva').src = PR.avatarURL(p.av);
     if (document.activeElement !== $('#prName')) $('#prName').value = p.name || '';
-    $('#avGrid').innerHTML = PR.PRESETS.map(function (a) { return '<button class="' + (p.av === 'p:' + a[0] ? 'sel' : '') + '" data-a="pickAvatar" data-v="' + a[0] + '" aria-label="' + a[1] + '" title="' + a[1] + '"><img src="art/avatars/' + a[0] + '.webp" alt="" loading="lazy"></button>'; }).join('');
+    $('#avGrid').innerHTML = PR.PRESETS.map(function (a) { return '<button class="' + (p.av === 'p:' + a[0] ? 'sel' : '') + '" data-a="pickAvatar" data-v="' + a[0] + '" aria-label="' + T(a[1]) + '" title="' + T(a[1]) + '"><img src="art/avatars/' + a[0] + '.webp" alt="" loading="lazy"></button>'; }).join('');
     $('#tabReal').classList.toggle('on', S.statTab === 'real'); $('#tabBots').classList.toggle('on', S.statTab === 'bots');
     $('#tabReal').setAttribute('aria-selected', S.statTab === 'real'); $('#tabBots').setAttribute('aria-selected', S.statTab === 'bots');
     var recent = st.recent.filter(function (r) { return r.real === (S.statTab === 'real'); });
-    if (!c.games) { $('#statBody').innerHTML = '<p class="hint">' + (S.statTab === 'real' ? 'Ancora nessuna partita completa con altri giocatori. Le statistiche si aggiornano alla fine di ogni partita.' : 'Ancora nessuna partita completa contro i bot. Prova dalla pagina iniziale con «Prova contro i bot».') + '</p>'; return; }
-    var cells = [[c.games, 'partite giocate'], [c.wins, 'vittorie'], [pct(c.wins, c.games), 'partite vinte'], [Math.round(c.points / c.games), 'punti in media'], [c.best, 'punteggio migliore'], [pct(c.exact, c.rounds), 'previsioni esatte'], [c.bestStreak, 'previsioni esatte di fila (record)'], [(c.places / c.games).toFixed(1), 'posizione media']];
+    if (!c.games) { $('#statBody').innerHTML = '<p class="hint">' + (S.statTab === 'real' ? T('Ancora nessuna partita completa con altri giocatori. Le statistiche si aggiornano alla fine di ogni partita.') : T('Ancora nessuna partita completa contro i bot. Prova dalla pagina iniziale con «Prova contro i bot».')) + '</p>'; return; }
+    var cells = [[c.games, T('partite giocate')], [c.wins, 'vittorie'], [pct(c.wins, c.games), T('partite vinte')], [Math.round(c.points / c.games), T('punti in media')], [c.best, T('punteggio migliore')], [pct(c.exact, c.rounds), T('previsioni esatte')], [c.bestStreak, T('previsioni esatte di fila (record)')], [(c.places / c.games).toFixed(1), T('posizione media')]];
     $('#statBody').innerHTML = '<div class="stats">' + cells.map(function (x) { return '<div class="stat"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' +
-      (recent.length ? '<h3 style="margin-top:12px">Ultime partite</h3><ul class="recent">' + recent.slice(0, 6).map(function (r) { var d = new Date(r.at); return '<li><span>' + d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) + ' · ' + r.n + ' giocatori</span><span>' + (r.place === 1 ? 'Vinta' : r.place + '° posto') + ', ' + r.score + ' punti</span></li>'; }).join('') + '</ul>' : '');
+      (recent.length ? T('<h3 style="margin-top:12px">Ultime partite</h3><ul class="recent">') + recent.slice(0, 6).map(function (r) { var d = new Date(r.at); return '<li><span>' + d.toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short' }) + ' · ' + r.n + T(' giocatori</span><span>') + (r.place === 1 ? T('Vinta') : T('{n}° posto', { n: r.place })) + ', ' + r.score + T(' punti</span></li>'); }).join('') + '</ul>' : '');
   }
   function profileChanged() {
     renderProfileChip(); renderProfile();
@@ -1071,13 +1103,14 @@
 
   var ACTIONS = {
     create: function () { createGame(false); },
-    solo: function () { var n = $('#nameInput').value.trim() || PR.get().name || 'Apprendista'; PR.save({ name: n }); renderProfileChip(); startSolo(n); },
+    solo: function () { var n = $('#nameInput').value.trim() || PR.get().name || T('Apprendista'); PR.save({ name: n }); renderProfileChip(); startSolo(n); },
     rules: function () { $('#ruleSearch').value = ''; renderRules(''); openOverlay('#ovRules'); },
     rulesSearch: function () { $('#ruleSearch').value = ''; renderRules(''); openOverlay('#ovRules'); $('#ruleSearch').focus(); },
+    lang: function (b) { I18N.setLang(b.dataset.l); },
     quickRule: function (b) { $('#ruleSearch').value = b.dataset.q; renderRules(b.dataset.q); },
     close: closeTransient,
-    copyCode: function () { copyText(S.view.code, 'Codice copiato.'); },
-    copyLink: function () { copyText(shareLink(), 'Invito copiato.'); },
+    copyCode: function () { copyText(S.view.code, T('Codice copiato.')); },
+    copyLink: function () { copyText(shareLink(), T('Invito copiato.')); },
     move: function (b) { send({ t: 'move', i: +b.dataset.i, d: +b.dataset.d }); },
     kick: function (b) { send({ t: 'kick', i: +b.dataset.i }); },
     shuffle: function () { send({ t: 'shuffle' }); },
@@ -1101,19 +1134,19 @@
     openProfile: function () { renderProfile(); openOverlay('#ovProfile'); },
     statTab: function (b) { S.statTab = b.dataset.k; renderProfile(); },
     pickAvatar: function (b) { PR.save({ av: 'p:' + b.dataset.v }); profileChanged(); },
-    exportProfile: function () { copyText(PR.exportCode(), 'Profilo copiato: incollalo sull\'altro dispositivo.'); },
-    importProfile: function () { try { PR.importCode($('#importBox').value); $('#importBox').value = ''; profileChanged(); toast('Profilo caricato.'); } catch (e) { toast(e.message, true); } },
-    resetStats: function (b) { if (b.dataset.sure) { PR.resetStats(); delete b.dataset.sure; b.textContent = 'Azzera le statistiche'; renderProfile(); renderProfileChip(); toast('Statistiche azzerate.'); } else { b.dataset.sure = '1'; b.textContent = 'Tocca di nuovo per confermare'; } },
+    exportProfile: function () { copyText(PR.exportCode(), T('Profilo copiato: incollalo sull\'altro dispositivo.')); },
+    importProfile: function () { try { PR.importCode($('#importBox').value); $('#importBox').value = ''; profileChanged(); toast(T('Profilo caricato.')); } catch (e) { toast(T(e.message), true); } },
+    resetStats: function (b) { if (b.dataset.sure) { PR.resetStats(); delete b.dataset.sure; b.textContent = T('Azzera le statistiche'); renderProfile(); renderProfileChip(); toast(T('Statistiche azzerate.')); } else { b.dataset.sure = '1'; b.textContent = T('Tocca di nuovo per confermare'); } },
     fullscreen: function () {
       var d = document;
       if (d.fullscreenElement) d.exitFullscreen();
-      else if (d.documentElement.requestFullscreen) d.documentElement.requestFullscreen().catch(function () { toast('Schermo intero non disponibile su questo dispositivo.'); });
-      else toast('Schermo intero non disponibile su questo dispositivo.');
+      else if (d.documentElement.requestFullscreen) d.documentElement.requestFullscreen().catch(function () { toast(T('Schermo intero non disponibile su questo dispositivo.')); });
+      else toast(T('Schermo intero non disponibile su questo dispositivo.'));
       closeTransient();
     },
     askExit: function () {
       $('#menuList').hidden = true;
-      $('#exitText').textContent = S.core && S.link ? 'Hai creato tu la partita: se esci, finisce per tutti.' : S.core ? 'La partita di prova terminerà.' : 'Potrai rientrare inserendo di nuovo il codice.';
+      $('#exitText').textContent = S.core && S.link ? T('Hai creato tu la partita: se esci, finisce per tutti.') : S.core ? T('La partita di prova terminerà.') : T('Potrai rientrare inserendo di nuovo il codice.');
       $('#exitConfirm').hidden = false;
     },
     exitNow: exitNow,
@@ -1152,7 +1185,7 @@
   $('#prName').addEventListener('change', function (e) { var n = e.target.value.trim(); if (n) { PR.save({ name: n }); $('#nameInput').value = n; profileChanged(); } });
   $('#prPhoto').addEventListener('change', function (e) {
     var f = e.target.files && e.target.files[0];
-    PR.processPhoto(f).then(function (url) { PR.save({ av: url }); profileChanged(); toast('Foto aggiornata.'); }).catch(function (err) { toast(err.message, true); });
+    PR.processPhoto(f).then(function (url) { PR.save({ av: url }); profileChanged(); toast(T('Foto aggiornata.')); }).catch(function (err) { toast(err.message, true); });
     e.target.value = '';
   });
   [['#setMusic', 'music'], ['#setSfx', 'sfx'], ['#setFx', 'fx'], ['#setVib', 'vibrate']].forEach(function (x) { $(x[0]).addEventListener('change', function (e) { SND.set(x[1], e.target.checked); renderSettings(); }); });
@@ -1182,8 +1215,8 @@
   }
   function renderResumeBox() {
     var box = $('#resumeBox'), h = store.get('host'), c = store.get('client'), fresh = function (t) { return t && Date.now() - t < 12 * 3600 * 1000; }, html = '';
-    if (!PREVIEW && h && fresh(h.savedAt) && h.g) html = 'Hai una partita in corso (codice ' + esc(h.code) + ').<div class="row"><button class="btn ink small" data-a="resumeHost">Riprendi la partita</button><button class="btn ghost small" data-a="forget">Dimentica</button></div>';
-    else if (!PREVIEW && c && fresh(c.at)) html = 'Eri nella partita ' + esc(c.code) + '.<div class="row"><button class="btn ink small" data-a="resumeClient">Rientra</button><button class="btn ghost small" data-a="forget">Dimentica</button></div>';
+    if (!PREVIEW && h && fresh(h.savedAt) && h.g) html = T('Hai una partita in corso (codice ') + esc(h.code) + T(').<div class="row"><button class="btn ink small" data-a="resumeHost">Riprendi la partita</button><button class="btn ghost small" data-a="forget">Dimentica</button></div>');
+    else if (!PREVIEW && c && fresh(c.at)) html = T('Eri nella partita ') + esc(c.code) + '.<div class="row"><button class="btn ink small" data-a="resumeClient">Rientra</button><button class="btn ghost small" data-a="forget">Dimentica</button></div>';
     box.innerHTML = html; box.hidden = !html;
   }
   function runeSVG() {
@@ -1194,14 +1227,17 @@
     for (var j = 0; j < 8; j++) s += '<path transform="rotate(' + (j * 45) + ' 200 200)" d="M200 42L212 134H188Z" stroke-width="1" opacity=".3"/>';
     return s + '</svg>';
   }
+  function renderHomeFan() {
+    var fan = [['W2', -30], ['r13', -15], ['y7', 0], ['b5', 15], ['J4', 30]];
+    $('#homeFan').innerHTML = fan.map(function (f, i) { return '<div class="card" style="margin-left:calc(var(--w)/-2);transform:rotate(' + f[1] + 'deg);animation-delay:' + (i * 90) + 'ms">' + C.face(f[0]) + '</div>'; }).join('');
+  }
   function boot() {
     $('#rune').innerHTML = runeSVG();
     $$('.torn').forEach(tear);
     $('#icChat').innerHTML = ICON.chat; $('#icSheet').innerHTML = ICON.sheet; $('#icRules').innerHTML = ICON.book; $('#icMenu').innerHTML = ICON.menu; $('#icVoice').innerHTML = ICON.mic;
-    var fan = [['W2', -30], ['r13', -15], ['y7', 0], ['b5', 15], ['J4', 30]];
-    $('#homeFan').innerHTML = fan.map(function (f, i) { return '<div class="card" style="margin-left:calc(var(--w)/-2);transform:rotate(' + f[1] + 'deg);animation-delay:' + (i * 90) + 'ms">' + C.face(f[0]) + '</div>'; }).join('');
-    $('#ruleQuick').innerHTML = QUICK.map(function (q) { return '<button data-a="quickRule" data-q="' + q + '">' + q + '</button>'; }).join('');
-    $('#emotes').innerHTML = ['😂', '😱', '🔥', '👏', '🧙', '🤡', '😈', '🙏'].map(function (e) { return '<button data-a="emote" data-e="' + e + '" aria-label="Reazione ' + e + '">' + e + '</button>'; }).join('');
+    renderHomeFan();
+    I18N.applyStatic(); renderLangPick(); renderQuick();
+    $('#emotes').innerHTML = ['😂', '😱', '🔥', '👏', '🧙', '🤡', '😈', '🙏'].map(function (e) { return '<button data-a="emote" data-e="' + e + '" aria-label="' + T('Reazione {e}', { e: e }) + '">' + e + '</button>'; }).join('');
     if (PREVIEW) { $('#previewNote').hidden = false; $('#createBtn').hidden = true; $('#joinForm').hidden = true; $('#orLine').hidden = true; }
     var legacy = store.get('name'); if (legacy && !PR.get().name) PR.save({ name: legacy });
     renderProfileChip();
