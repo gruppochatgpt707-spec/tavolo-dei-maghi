@@ -9,7 +9,7 @@ async function until(fn, ms = 15000, label = 'condizione') {
   while (Date.now() - t < ms) { const r = await fn(); if (r) return r; await sleep(100); }
   throw new Error('Timeout: ' + label);
 }
-async function search(page, name) { await page.fill('#nameInput', name); await page.click('#searchBtn'); await page.waitForSelector('#ovSearch:not([hidden])'); }
+async function search(page, name, vo) { await page.fill('#nameInput', name); await page.click('#searchBtn'); await page.waitForSelector('#ovSearch:not([hidden])'); if (vo) { await page.setChecked('#sPM', vo.pm); await page.setChecked('#sBlind', vo.bl); } await page.click('#searchGo'); }
 const where = p => p.evaluate(() => ({ lobby: !document.querySelector('#lobby').hidden, game: !document.querySelector('#game').hidden, code: window.__S.code, names: window.__S.view ? window.__S.view.players.map(x => x.name + (x.bot ? '*' : '')) : null, msg: document.querySelector('#homeMsg').textContent }));
 
 (async () => {
@@ -23,13 +23,22 @@ const where = p => p.evaluate(() => ({ lobby: !document.querySelector('#lobby').
     log('4 giocatori nella stessa ricerca:', await ps[0].textContent('#searchText'));
     await until(async () => (await Promise.all(ps.map(where))).every(w => w.game), 45000, 'partita iniziata per tutti');
     const ws = await Promise.all(ps.map(where));
+    const vopts = await ps[0].evaluate(() => window.__S.view.opts);
+    assert(vopts.plusMinus && vopts.blind, 'varianti predefinite nella ricerca'); log('le varianti predefinite sono attive nella partita trovata');
     assert(ws.every(w => w.code === ws[0].code), 'stesso codice per tutti');
     assert.strictEqual(ws[0].names.length, 4); assert(!ws[0].names.some(n => n.endsWith('*')), 'nessun bot');
     log('partita partita da sola con lo stesso codice', ws[0].code, ws[0].names.join(', '));
 
     /* 2 giocatori: "Inizia subito" e un bot completa il tavolo */
     const q = [];
+    /* chi sceglie varianti diverse non viene messo allo stesso tavolo */
+    const other = await newPlayer(browser, BASE, { viewport: { width: 412, height: 860 } });
+    await search(other, 'Olga', { pm: false, bl: false });
     for (const n of ['Elena', 'Fabio']) { const p = await newPlayer(browser, BASE, { viewport: { width: 1280, height: 800 } }); q.push(p); await search(p, n); await sleep(500); }
+    await sleep(2500);
+    assert((await other.textContent('#searchText')).includes('solo tu'), 'Olga resta da sola: ' + await other.textContent('#searchText'));
+    log('chi ha scelto varianti diverse resta in una ricerca separata');
+    await other.click('#searchRun [data-a="searchCancel"]');
     await until(async () => !(await q[1].isDisabled('#searchNow')), 8000, 'pulsante inizia subito');
     log('nuova ricerca separata dalla prima:', await q[1].textContent('#searchText'));
     await q[1].click('#searchNow');
@@ -43,16 +52,16 @@ const where = p => p.evaluate(() => ({ lobby: !document.querySelector('#lobby').
     const t = [];
     for (const n of ['Ivo', 'Lia', 'Max']) { const p = await newPlayer(browser, BASE, { viewport: { width: 412, height: 860 } }); t.push(p); await search(p, n); await sleep(600); }
     await until(async () => (await t[2].textContent('#searchText')).includes('3 giocatori'), 8000, 'in 3 nella ricerca');
-    await t[0].click('[data-a="searchCancel"]');
+    await t[0].click('#searchRun [data-a="searchCancel"]');
     await until(async () => (await t[1].textContent('#searchText')).includes('2 giocatori') && (await t[2].textContent('#searchText')).includes('2 giocatori'), 15000, 'gli altri due si ritrovano');
     log('chi organizzava ha annullato: gli altri due si sono ritrovati');
-    await t[1].click('[data-a="searchCancel"]'); await t[2].click('[data-a="searchCancel"]');
+    await t[1].click('#searchRun [data-a="searchCancel"]'); await t[2].click('#searchRun [data-a="searchCancel"]');
 
     /* annullare la ricerca la chiude davvero */
     const r = await newPlayer(browser, BASE, { viewport: { width: 412, height: 860 } });
-    await search(r, 'Gina'); await sleep(1500); await r.click('[data-a="searchCancel"]');
+    await search(r, 'Gina'); await sleep(1500); await r.click('#searchRun [data-a="searchCancel"]');
     assert(await r.isHidden('#ovSearch')); log('ricerca annullata');
-    const errs = [...ps, ...q, ...t, r].flatMap(p => p.errors || []);
+    const errs = [...ps, ...q, ...t, r, other].flatMap(p => p.errors || []);
     assert.deepStrictEqual(errs, [], 'errori JS: ' + errs.join(' | '));
     log('nessun errore JavaScript');
   } catch (e) { failed = true; console.error('ERRORE', e); }

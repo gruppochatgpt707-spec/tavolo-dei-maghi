@@ -109,6 +109,7 @@
     var code = match ? match.code : N.makeCode(), token = N.makeToken();
     S.token = token; S.code = code; S.name = name;
     S.core = hostCore(code, token, false);
+    if (match && match.opts) { S.core.opts.plusMinus = !!match.opts.plusMinus; S.core.opts.blind = !!match.opts.blind; }
     makeVoice();
     S.link = new N.HostLink(code, S.core, function (c) { S.voice.incoming(c); }, function () {});
     S.link.open(false).then(function (p) {
@@ -144,10 +145,22 @@
     if (!name) return;
     if (PREVIEW) { homeMsg('Dall\'anteprima non si può cercare online. Usa il sito o l\'app.'); return; }
     homeMsg('');
-    $('#searchList').innerHTML = ''; $('#searchText').textContent = 'Cerco altri giocatori che stanno cercando una partita in questo momento…';
-    $('#searchNow').disabled = true;
+    var saved = {}; try { saved = JSON.parse(localStorage.getItem('tavolo_search_opts') || '{}'); } catch (e) {}
+    $('#sPM').checked = saved.plusMinus !== false; $('#sBlind').checked = saved.blind !== false;
+    $('#searchSetup').hidden = false; $('#searchRun').hidden = true;
     openOverlay('#ovSearch');
-    S.search = new window.Match.Search({ name: name, av: PR.get().av }, {
+  }
+  function beginSearch() {
+    var name = nameOrAsk();
+    if (!name) return;
+    var vo = { plusMinus: $('#sPM').checked, blind: $('#sBlind').checked };
+    try { localStorage.setItem('tavolo_search_opts', JSON.stringify(vo)); } catch (e) {}
+    $('#searchSetup').hidden = true; $('#searchRun').hidden = false;
+    $('#searchList').innerHTML = ''; $('#searchText').textContent = 'Cerco altri giocatori che stanno cercando una partita in questo momento…';
+    var names = [vo.plusMinus ? 'Più o meno uno' : '', vo.blind ? 'Prima mano alla cieca' : ''].filter(Boolean);
+    $('#searchVar').textContent = names.length ? 'Varianti: ' + names.join(', ') + '.' : 'Senza varianti.';
+    $('#searchNow').disabled = true;
+    S.search = new window.Match.Search({ name: name, av: PR.get().av, room: '-pm' + (vo.plusMinus ? 1 : 0) + '-bl' + (vo.blind ? 1 : 0) }, {
       status: function (st) {
         if (st.text) { $('#searchText').textContent = st.text; return; }
         var n = st.n;
@@ -160,6 +173,7 @@
         S.search = null;
         ($('#ovSearch').hidden = true);
         SND.sfx('good');
+        m.opts = vo;
         if (m.host) createGame(true, m);
         else { S.matched = true; joinMatched(m.code, 0); }
       }
@@ -333,6 +347,7 @@
     }).join('');
     $('#seatTools').hidden = !v.amHost;
     $('#optPM').checked = v.opts.plusMinus; $('#optPM').disabled = !v.amHost;
+    $('#optBlind').checked = !!v.opts.blind; $('#optBlind').disabled = !v.amHost;
     $('#optPlay').value = String(v.opts.playSeconds); $('#optPlay').disabled = !v.amHost;
     $('#optBid').value = String(v.opts.bidSeconds); $('#optBid').disabled = !v.amHost;
     $('#startBtn').hidden = !v.amHost;
@@ -420,9 +435,10 @@
       for (var k = 0; k < n; k++) backs += '<span style="left:' + (50 - (n * 7) / 2 - 10 + k * 7) + 'px;transform:rotate(' + ((k - n / 2) * 4) + 'deg)"></span>';
       var mic = p.voice ? '<i class="mic' + (p.muted ? ' mute' : '') + '">' + (p.muted ? ICON.micoff : ICON.mic) + '</i>' : '';
       var ord = v.phase === 'bid' && p.bid === null && !active ? '' : '';
-      html += '<div class="seat' + (active ? ' turn' : '') + (p.connected ? '' : ' away') + '" id="seat-' + i + '" data-peer="' + esc(p.peerId || '') + '" style="left:' + pos.x.toFixed(1) + 'px;top:' + pos.y.toFixed(1) + 'px;--hue:' + p.hue + '">' +
+      html += '<div class="seat' + (active ? ' turn' : '') + (p.connected ? '' : ' away') + (v.peek && v.peek[i] ? (pos.x < G.cx - 4 ? ' pk-r' : ' pk-l') : '') + '" id="seat-' + i + '" data-peer="' + esc(p.peerId || '') + '" style="left:' + pos.x.toFixed(1) + 'px;top:' + pos.y.toFixed(1) + 'px;--hue:' + p.hue + '">' +
         '<div class="avwrap">' + imgTag(p, 'ava') + sealHTML(p, i, v) + (v.phase !== 'bid' && v.phase !== 'deal' && v.phase !== 'trump' ? pileHTML(p, i) : '') + (v.dealer === i ? '<i class="dtok" title="Mazziere">M</i>' : '') + mic + ord + '</div>' +
-        '<div class="tag">' + esc(p.name) + (p.connected ? '' : ' (assente)') + '</div><div class="backs">' + backs + '</div></div>';
+        '<div class="tag">' + esc(p.name) + (p.connected ? '' : ' (assente)') + '</div>' +
+        (v.peek && v.peek[i] ? '<div class="peek card" title="' + esc(E.cardName(v.peek[i])) + '">' + C.face(v.peek[i]) + '</div>' : '<div class="backs">' + backs + '</div>') + '</div>';
     });
     $('#seats').innerHTML = html;
     $('#rune').style.top = G.cy + 'px';
@@ -519,6 +535,7 @@
   }
 
   function sortHand(hand, trump) {
+    if (hand.indexOf('X') >= 0) return hand.slice();
     var order = function (c) {
       if (E.isWizard(c)) return 0;
       if (E.isJester(c)) return 900;
@@ -538,8 +555,9 @@
       if (!el) {
         el = document.createElement('div');
         el.className = 'hcard card'; el.id = 'h-' + c; el.dataset.c = c;
-        el.innerHTML = C.face(c);
-        el.setAttribute('aria-label', E.cardName(c));
+        el.innerHTML = c === 'X' ? C.back() : C.face(c);
+        if (c === 'X') el.classList.add('hidden-own');
+        el.setAttribute('aria-label', c === 'X' ? 'La tua carta, coperta: non puoi vederla' : E.cardName(c));
         if (S.dealing) el.classList.add('undealt');
         box.appendChild(el);
       }
@@ -654,6 +672,7 @@
     if (before.length) bits.push('prima di te: ' + before.join(', ') + ' (totale ' + v.bidSum + ')');
     else bits.push('prevedi per primo');
     if (v.forbidden !== null) bits.push('con la variante non puoi dire ' + v.forbidden);
+    if (v.peek) bits.unshift('<b>Alla cieca:</b> la tua carta è coperta, guarda quelle degli altri');
     $('#bidSub').innerHTML = bits.join(' · ');
     var ok = $('#bidOk');
     ok.disabled = S.bidPick === null;
@@ -1066,6 +1085,7 @@
     start: function () { send({ t: 'start' }); },
     search: function () { startSearch(); },
     searchNow: function () { if (S.search) S.search.startNow(); },
+    searchGo: function () { beginSearch(); },
     searchCancel: function () { if (S.search) S.search.cancel(); S.search = null; ($('#ovSearch').hidden = true); },
     pickBid: function (b) { S.bidPick = +b.dataset.n; renderBidPanel(S.view); sfx('select'); },
     confirmBid: function () { if (S.bidPick !== null) send({ t: 'bid', n: S.bidPick }); },
@@ -1124,6 +1144,7 @@
   $('#chatForm').addEventListener('submit', function (e) { e.preventDefault(); var i = $('#chatInput'), t = i.value.trim(); if (t) { send({ t: 'chat', text: t }); i.value = ''; } });
   $('#ruleSearch').addEventListener('input', function (e) { renderRules(e.target.value); });
   $('#optPM').addEventListener('change', function (e) { send({ t: 'opt', k: 'plusMinus', v: e.target.checked }); });
+  $('#optBlind').addEventListener('change', function (e) { send({ t: 'opt', k: 'blind', v: e.target.checked }); });
   $('#optPlay').addEventListener('change', function (e) { send({ t: 'opt', k: 'playSeconds', v: +e.target.value }); });
   $('#optBid').addEventListener('change', function (e) { send({ t: 'opt', k: 'bidSeconds', v: +e.target.value }); });
   $('#codeInput').addEventListener('input', function (e) { e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''); });

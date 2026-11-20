@@ -47,6 +47,7 @@
     return {
       n: n,
       plusMinus: !!opts.plusMinus,
+      blind: !!opts.blind,
       firstDealer: opts.firstDealer || 0,
       round: 0,
       totalRounds: totalRounds(n),
@@ -279,7 +280,21 @@
     return est;
   }
 
+  /* Variante alla cieca: nella prima mano ognuno vede le carte degli altri ma non la propria */
+  function blindNow(g) { return !!(g && g.blind && g.round === 1); }
+  function blindBid(g, seat) {
+    var others = [];
+    g.hands.forEach(function (h, i) { if (i !== seat && h.length) others.push(h[0]); });
+    g.trick.forEach(function (e) { if (e.p !== seat) others.push(e.c); });
+    if (others.some(isWizard)) return 0;
+    var strong = others.filter(function (c) { return !isJester(c) && (suitOf(c) === g.trumpSuit || valueOf(c) >= 9); }).length;
+    return strong === 0 ? 1 : 0;
+  }
   function autoBid(g, seat) {
+    if (blindNow(g)) {
+      var bb = blindBid(g, seat), fb = forbiddenBid(g);
+      return fb === bb ? 1 - bb : bb;
+    }
     var b = Math.min(g.round, Math.max(0, Math.round(estimateTricks(g, seat))));
     var forb = forbiddenBid(g);
     if (forb === b) b = b > 0 ? b - 1 : b + 1;
@@ -321,6 +336,6 @@
     applyBid: applyBid, bidsPlaced: bidsPlaced, bidsSum: bidsSum, forbiddenBid: forbiddenBid,
     leadInfo: leadInfo, legalCards: legalCards, trickWinnerEntry: trickWinnerEntry, applyPlay: applyPlay,
     scoreFor: scoreFor, collectTrick: collectTrick, nextRound: nextRound, winners: winners,
-    autoTrump: autoTrump, autoBid: autoBid, autoPlay: autoPlay, power: power
+    autoTrump: autoTrump, autoBid: autoBid, autoPlay: autoPlay, power: power, blindNow: blindNow
   };
 });

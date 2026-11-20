@@ -101,6 +101,9 @@ async function actAll(pages) {
         return (v.hand || []).length !== (v.players[v.me] ? v.players[v.me].cards : 0) || /hands|"hand"/.test(s) || 'hands' in v;
       }).length);
       assert.equal(leak, 0, 'le carte degli altri non devono arrivare ai dispositivi');
+      /* variante alla cieca: nella prima mano la propria carta non arriva mai, quelle degli altri sì */
+      const blind = await p.evaluate(() => { const r1 = window.__log.filter(v => v.round === 1 && ['bid', 'play', 'trump'].indexOf(v.phase) >= 0); return { n: r1.length, own: r1.filter(v => (v.hand || []).some(c => c !== 'X') || (v.peek && v.peek[v.me])).length, peek: r1.filter(v => v.phase === 'bid' && v.peek && v.peek.filter(Boolean).length === v.players.length - 1).length }; });
+      assert(blind.n > 0 && blind.own === 0 && blind.peek > 0, 'alla cieca: ' + JSON.stringify(blind));
     };
     let lastShot = 0, shotsTaken = new Set(), lastLog = 0;
     await until(async () => {
@@ -121,7 +124,7 @@ async function actAll(pages) {
     await sleep(300);
     log('partita completa giocata fino alla classifica');
     for (const p of [p2, p3, p4]) await hiddenOK(p);
-    log('nessuna carta altrui nei dati ricevuti');
+    log('nessuna carta altrui nei dati ricevuti; prima mano alla cieca: la propria carta non arriva mai, quelle degli altri sì');
     const end = await view(p2);
     assert.equal(end.history.length, 15);
     end.history.forEach(h => { assert.equal(h.won.reduce((a, b) => a + b, 0), h.round); });

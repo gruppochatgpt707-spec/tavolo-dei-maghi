@@ -41,7 +41,7 @@
     this.solo = !!cfg.solo;
     this.players = [];
     this.g = null;
-    this.opts = { plusMinus: false, bidSeconds: 60, playSeconds: 30, firstDealer: 0 };
+    this.opts = { plusMinus: true, blind: true, bidSeconds: 60, playSeconds: 30, firstDealer: 0 };
     this.avSig = '';
     this.hostToken = cfg.token;
     this.key = null; this.deadline = null; this.total = 0;
@@ -137,6 +137,8 @@
         return this.after();
       case 'play':
         if (!g) return;
+        /* alla cieca il giocatore non conosce la sua carta: gioca quella coperta */
+        if (m.c === 'X' && E.blindNow(g) && g.hands[seat].length) m.c = g.hands[seat][0];
         r = E.applyPlay(g, seat, m.c);
         if (!r.ok) return this.out(token, { t: 'toast', text: r.why, bad: true });
         return this.after();
@@ -175,6 +177,7 @@
       case 'opt':
         if (this.g) return;
         if (m.k === 'plusMinus') this.opts.plusMinus = !!m.v;
+        if (m.k === 'blind') this.opts.blind = !!m.v;
         if (m.k === 'playSeconds' && [0, 15, 30, 60, 120].indexOf(m.v) >= 0) this.opts.playSeconds = m.v;
         if (m.k === 'bidSeconds' && [0, 30, 60, 90, 120, 180].indexOf(m.v) >= 0) this.opts.bidSeconds = m.v;
         return this.after();
@@ -238,7 +241,7 @@
 
   H.start = function () {
     if (this.g || this.players.length < 3) return;
-    this.g = E.newGame(this.players.length, { plusMinus: this.opts.plusMinus, firstDealer: 0 });
+    this.g = E.newGame(this.players.length, { plusMinus: this.opts.plusMinus, blind: this.opts.blind, firstDealer: 0 });
     this.g.id = this.code + '-' + Date.now().toString(36);
     this.players.forEach(function (p) { p.ready = false; });
     E.startRound(this.g, this.rng);
@@ -347,6 +350,13 @@
       v.bidSum = E.bidsSum(g);
       v.history = g.history;
       v.plusMinus = g.plusMinus;
+      v.blind = g.blind;
+      if (E.blindNow(g) && g.phase !== 'roundEnd' && g.phase !== 'gameOver') {
+        /* la propria carta resta coperta; si vedono quelle ancora in mano agli altri */
+        v.hand = v.hand.map(function () { return 'X'; });
+        v.legal = v.legal.length ? ['X'] : [];
+        v.peek = g.hands.map(function (h, i) { return i !== seat && h.length ? h[0] : null; });
+      }
       v.gameId = g.id;
       if (g.phase === 'gameOver') v.winners = E.winners(g);
     }

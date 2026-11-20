@@ -55,8 +55,10 @@
       { t: 'Quando finisce e chi vince', a: 'Dopo l\'ultima mano vince chi ha più punti.', k: 'fine partita vincitore finisce' },
       { t: 'In caso di parità', a: 'Se più giocatori hanno lo stesso punteggio massimo, vincono tutti.', k: 'parità pareggio stesso punteggio spareggio' }
     ]},
-    { sec: 'Variante', items: [
-      { t: 'Più o meno uno', a: 'Si attiva nella sala d\'attesa. Il totale delle previsioni non può essere uguale al numero di prese della mano: il mazziere, ultimo a prevedere, non può scegliere il numero che farebbe tornare il conto. Il gioco lo blocca in automatico.', k: 'variante più meno uno plus minus totale diverso vietato mazziere regola' }
+    { sec: 'Varianti', items: [
+      { t: 'Più o meno uno', a: 'È attiva di base e si può togliere nella sala d\'attesa. Il totale delle previsioni non può essere uguale al numero di prese della mano: il mazziere, ultimo a prevedere, non può scegliere il numero che farebbe tornare il conto. Il gioco lo blocca in automatico.', k: 'variante più meno uno plus minus totale diverso vietato mazziere regola' },
+      { t: 'Prima mano alla cieca', a: 'È attiva di base e si può togliere nella sala d\'attesa. Solo nella prima mano, quando ognuno ha una carta, la propria resta coperta: vedi le carte degli altri, accanto alle loro foto, ma non la tua. Prevedi guardando le loro. Al tuo turno tocchi la carta coperta e la giochi senza sapere quale sia: la scopri sul tavolo.', k: 'variante cieca coperta prima mano fronte indiana non vedo la mia carta altri' },
+      { t: 'Varianti nella ricerca globale', a: 'Prima di cercare scegli le varianti: ti metto al tavolo solo con chi ha scelto le stesse.', k: 'varianti ricerca globale online scegliere' }
     ]},
     { sec: 'Come funziona il gioco', items: [
       { t: 'Il giro e il mazziere', a: 'Le foto dei giocatori sono disposte attorno al tavolo nel loro ordine, e le frecce ricordano il senso orario. Chi deve giocare o prevedere si illumina, sul tavolo e nel riquadro dei nomi in alto. Prima delle previsioni, accanto a ogni foto un numerino (1°, 2°…) indica l\'ordine in cui si prevede. Il gettone M indica il mazziere. A inizio mano un cartiglio dice chi distribuisce e chi prevede per primo.', k: 'giro ordine turno chi tocca mazziere gettone senso orario dopo prima riquadro foto' },

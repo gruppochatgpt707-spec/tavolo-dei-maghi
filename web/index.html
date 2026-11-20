@@ -108,6 +108,7 @@
             </select>
           </label>
           <label class="toggle"><input type="checkbox" id="optPM"><span>Variante Più o meno uno</span></label>
+          <label class="toggle"><input type="checkbox" id="optBlind"><span>Variante Prima mano alla cieca</span></label>
           <div id="lobbyVoiceBox">
             <h3>Chat vocale</h3>
             <button class="btn ink small" data-a="openVoice" id="lobbyVoice">Apri la chat vocale</button>
@@ -334,13 +335,22 @@
   <div class="overlay" id="ovSearch" hidden>
     <div class="sheet small sheet-paper torn" role="dialog" aria-labelledby="searchTitle">
       <h2 id="searchTitle">Ricerca globale</h2>
+      <div id="searchSetup">
+        <p>Scegli le varianti: ti metto al tavolo con chi ha scelto le stesse.</p>
+        <label class="toggle"><input type="checkbox" id="sPM" checked><span>Variante Più o meno uno</span></label>
+        <label class="toggle"><input type="checkbox" id="sBlind" checked><span>Variante Prima mano alla cieca</span></label>
+        <div class="row"><button class="btn ghost" data-a="searchCancel">Annulla</button><button class="btn gold" data-a="searchGo" id="searchGo">Cerca</button></div>
+      </div>
+      <div id="searchRun" hidden>
       <p id="searchText">Cerco altri giocatori che stanno cercando una partita in questo momento…</p>
+      <p class="hint" id="searchVar"></p>
       <ul class="vlist" id="searchList"></ul>
       <p class="hint" id="searchHint">Con 3 o più giocatori la partita parte da sola dopo 15 secondi senza nuovi arrivi; in 2 dopo 45 secondi, con un bot in più. Al massimo 6.</p>
       <div class="spinner" aria-hidden="true"></div>
       <div class="row">
         <button class="btn ghost" data-a="searchCancel">Annulla</button>
         <button class="btn gold" data-a="searchNow" id="searchNow" disabled>Inizia subito</button>
+      </div>
       </div>
       <p class="legal">Giocherai con persone che non conosci: la chat vocale resta spenta finché non la attivi tu. Non condividere dati personali.</p>
     </div>
