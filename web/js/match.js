@@ -12,6 +12,7 @@
   function Search(me, cb) {
     this.me = me; this.cb = cb; this.stopped = false; this.peer = null; this.conn = null; this.list = [];
     this.role = null; this.lastJoin = 0; this.tick = null; this.fails = 0;
+    this.room = ROOM + (me.room || '');
   }
   var P = Search.prototype;
 
@@ -23,10 +24,14 @@
   /* prova a diventare lo smistatore; se il nome è già preso, si collega a chi lo ha */
   P.claim = function () {
     if (this.stopped) return;
-    var self = this, p = new root.Peer(ROOM, N.PEER_OPTS), opened = false;
+    var self = this, p = new root.Peer(this.room, N.PEER_OPTS), opened = false;
     this.peer = p;
-    p.on('open', function () { opened = true; self.fails = 0; self.lead(); });
-    p.on('connection', function (c) { self.adopt(c); });
+    p.on('open', function () {
+      opened = true; self.fails = 0;
+      if (root.Relay) self.spare = root.Relay.listen(self.room, function (c) { self.adopt(c); });
+      self.lead();
+    });
+    p.on('connection', function (c) { self.adopt(N.fixConn(c)); });
     p.on('error', function (e) {
       if (opened) return;
       try { p.destroy(); } catch (x) {}
@@ -107,14 +112,22 @@
     this.peer = p;
     var again = function () {
       if (done || self.stopped) return; done = true;
+      if (self.conn && self.conn.relay) { try { self.conn.close(); } catch (e) {} }
+      if (self.dialing) self.dialing.abort();
       try { p.destroy(); } catch (e) {}
       setTimeout(function () { self.claim(); }, 300 + Math.random() * 1500);
     };
     p.on('open', function () {
-      var c = p.connect(ROOM, { reliable: true });
-      self.conn = c;
-      var to = setTimeout(again, 8000);
-      c.on('open', function () { clearTimeout(to); self.fails = 0; c.send({ t: 'hi', name: self.me.name, av: self.me.av }); });
+      var d = dial(p, self.room);
+      self.dialing = d;
+      d.promise.then(function (c) {
+        self.conn = c; self.fails = 0;
+        c.send({ t: 'hi', name: self.me.name, av: self.me.av });
+        wire(c);
+      }, again);
+    });
+    function dial(peer, id) { return N.dial(peer, id, { spareAfter: 2500, timeout: 14000 }); }
+    function wire(c) {
       c.on('data', function (m) {
         if (!m || self.stopped) return;
         if (m.t === 'count') self.cb.status({ role: 'seek', n: m.n, names: m.names, left: m.left });
@@ -127,13 +140,15 @@
       });
       c.on('close', again);
       c.on('error', again);
-    });
-    p.on('error', function (e) { if (e.type === 'peer-unavailable' || !self.conn || !self.conn.open) again(); });
+    }
+    p.on('error', function (e) { if (e.type === 'peer-unavailable' || !self.conn || !self.conn.open) { if (self.dialing) self.dialing.abort(e); again(); } });
   };
   P.startNow = function () { if (this.role === 'lead') this.go(); else if (this.conn && this.conn.open) { try { this.conn.send({ t: 'now' }); } catch (e) {} } };
 
   P.close = function () {
     clearInterval(this.tick);
+    if (this.spare) { this.spare.close(); this.spare = null; }
+    if (this.conn && this.conn.relay) { try { this.conn.close(); } catch (e) {} }
     if (this.peer) { try { this.peer.destroy(); } catch (e) {} }
     this.peer = null; this.conn = null;
   };

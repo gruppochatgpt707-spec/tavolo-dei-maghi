@@ -44,7 +44,7 @@
         <div class="or" id="orLine"><span>oppure entra con un codice</span></div>
         <form id="joinForm" class="joinrow" autocomplete="off">
           <label class="vh" for="codeInput">Codice partita</label>
-          <input id="codeInput" class="codeinput" maxlength="5" placeholder="CODICE" autocapitalize="characters" spellcheck="false">
+          <input id="codeInput" class="codeinput" maxlength="5" placeholder="CODICE" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go">
           <button class="btn ink" id="joinBtn" type="submit">Entra</button>
         </form>
         <div id="homeMsg" class="formmsg" role="alert"></div>
@@ -359,6 +359,7 @@
 </div>
 <script src="js/config.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/relay.js"></script>
 <script src="js/net.js"></script>
 <script src="js/cardface.js"></script>
 <script src="js/rules-data.js"></script>

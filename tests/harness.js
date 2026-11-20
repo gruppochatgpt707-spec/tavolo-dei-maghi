@@ -33,7 +33,7 @@ function startServer(port) {
         const m = JSON.parse(b);
         const r = peers.get(m.to);
         if (r) r.write(`data: ${b}\n\n`);
-        else if (m.type === 'conn' || m.type === 'offer') {
+        else if (m.type === 'conn' || m.type === 'offer' || m.type === 'probe') {
           const f = peers.get(m.from);
           if (f) f.write(`data: ${JSON.stringify({ type: 'no-peer', connId: m.connId, id: m.to })}\n\n`);
         }
@@ -47,6 +47,7 @@ function startServer(port) {
     res.writeHead(200, { 'Content-Type': TYPES[file.split('.').pop()] || 'application/octet-stream' });
     res.end(fs.readFileSync(fp));
   });
+  srv.mqtt = require('./mqtt-broker').attach(srv);
   return new Promise(r => srv.listen(port, () => r(srv)));
 }
 
@@ -101,6 +102,8 @@ const SHIM = String(function () {
   Peer.prototype = Object.create(Em.prototype);
   Peer.prototype._on = function (m) {
     var self = this, c;
+    if (m.type === 'probe') return;
+    if (m.type === 'conn' && window.__NO_DIRECT) return;
     if (m.type === 'conn') { c = new Conn(this, m.from, m.connId); this.conns[m.connId] = c; this.emit('connection', c); c.open = true; c.emit('open'); post({ to: m.from, from: this.id, type: 'conn-ok', connId: m.connId }); }
     else if (m.type === 'conn-ok') { c = this.conns[m.connId]; if (c) { c.open = true; c.emit('open'); } }
     else if (m.type === 'no-peer') { this.emit('error', { type: 'peer-unavailable' }); }
@@ -115,6 +118,8 @@ const SHIM = String(function () {
   Peer.prototype.connect = function (dest) {
     var id = 'c' + Math.random().toString(36).slice(2), c = new Conn(this, dest, id);
     this.conns[id] = c;
+    /* dispositivo che non riesce a collegarsi direttamente (come un iPhone dietro la rete del telefono) */
+    if (window.__NO_DIRECT) { post({ to: dest, from: this.id, type: 'probe', connId: id }); return c; }
     post({ to: dest, from: this.id, type: 'conn', connId: id });
     return c;
   };
@@ -161,7 +166,7 @@ async function newPlayer(browser, base, opts = {}) {
   page.on('pageerror', e => page.errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) page.errors.push(m.text()); });
   await page.addInitScript(`(${SHIM})();`);
-  await page.addInitScript('window.__TEST__=true;');
+  await page.addInitScript('window.__TEST__=true;window.TAVOLO_BROKERS=[' + JSON.stringify(base.replace(/^http/, 'ws') + 'mqtt') + '];' + (opts.noDirect ? 'window.__NO_DIRECT=true;' : ''));
   if (opts.speed) await page.addInitScript(speedScript(opts.speed));
   await page.goto(base);
   return page;

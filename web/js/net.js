@@ -421,6 +421,62 @@
     }
   };
 
+  /* La libreria spedisce in formato testo solo messaggi sotto i 16 KB e scarta in silenzio quelli più lunghi
+     (per esempio quando ci sono foto profilo). Qui i messaggi lunghi vengono spezzati e ricomposti. */
+  var PART = 5000;
+  function fixConn(c) {
+    if (!c || c.relay || c.__fixed) return c;
+    c.__fixed = true;
+    var send = c.send.bind(c), emit = c.emit.bind(c), parts = {};
+    c.send = function (m) {
+      var s = JSON.stringify(m);
+      if (s.length <= PART) return send(m);
+      var id = Math.random().toString(36).slice(2, 9), n = Math.ceil(s.length / PART);
+      for (var i = 0; i < n; i++) send({ __p: id, i: i, n: n, s: s.slice(i * PART, (i + 1) * PART) });
+    };
+    c.emit = function (ev, d) {
+      if (ev === 'data' && d && d.__p) {
+        var b = parts[d.__p] || (parts[d.__p] = { got: 0, a: [] });
+        if (b.a[d.i] === undefined) { b.a[d.i] = d.s; b.got++; }
+        if (b.got === d.n) { delete parts[d.__p]; var m; try { m = JSON.parse(b.a.join('')); } catch (e) { return true; } return emit('data', m); }
+        return true;
+      }
+      return emit.apply(null, arguments);
+    };
+    return c;
+  }
+
+  /* Collegarsi a un tavolo: prima la strada diretta; se dopo qualche secondo non si apre,
+     si prova anche quella di riserva (Relay) e vince la prima che risponde. */
+  function dial(peer, id, o) {
+    o = o || {};
+    var done = false, direct = null, spare = null, failedDirect = false, failedSpare = false, t1 = null, t2 = null, ctl = {};
+    ctl.promise = new Promise(function (res, rej) {
+      function finish(err, c) {
+        if (done) { if (c) { try { c.close(); } catch (e) {} } return; }
+        done = true; clearTimeout(t1); clearTimeout(t2);
+        [direct, spare].forEach(function (x) { if (x && x !== c) { try { x.close(); } catch (e) {} } });
+        if (err) rej(err); else res(c);
+      }
+      ctl.abort = function (e) { finish(e || { type: 'aborted' }); };
+      function startSpare() {
+        if (done || spare || !root.Relay) { if (!root.Relay) { failedSpare = true; if (failedDirect) finish({ type: 'timeout' }); } return; }
+        spare = root.Relay.connect(id);
+        spare.on('open', function () { finish(null, spare); });
+        var bad = function (e) { if (spare && spare.open) return; failedSpare = true; if (failedDirect) finish(e && e.type ? e : { type: 'timeout' }); };
+        spare.on('error', bad); spare.on('close', bad);
+      }
+      try { direct = fixConn(peer.connect(id, { reliable: true, serialization: 'json' })); } catch (e) { direct = null; failedDirect = true; startSpare(); }
+      if (direct) {
+        direct.on('open', function () { finish(null, direct); });
+        direct.on('error', function () { failedDirect = true; startSpare(); if (failedSpare) finish({ type: 'timeout' }); });
+      }
+      t1 = setTimeout(startSpare, o.spareAfter || 3500);
+      t2 = setTimeout(function () { finish({ type: 'timeout' }); }, o.timeout || 18000);
+    });
+    return ctl;
+  }
+
   /* Lato host: accetta i dispositivi e li collega a HostCore. */
   function HostLink(code, core, onCall, onStatus) {
     this.code = code; this.core = core; this.onCall = onCall; this.onStatus = onStatus || function () {};
@@ -435,8 +491,12 @@
         (function tryOpen() {
           var p = new root.Peer(PREFIX + self.code.toLowerCase(), PEER_OPTS);
           var opened = false;
-          p.on('open', function () { opened = true; self.peer = p; self.startHeartbeat(); res(p); });
-          p.on('connection', function (c) { self.adopt(c); });
+          p.on('open', function () {
+            opened = true; self.peer = p; self.startHeartbeat();
+            if (root.Relay && !self.spare) self.spare = root.Relay.listen(PREFIX + self.code.toLowerCase(), function (c) { self.adopt(c); });
+            res(p);
+          });
+          p.on('connection', function (c) { self.adopt(fixConn(c)); });
           p.on('call', function (c) { self.onCall(c); });
           p.on('disconnected', function () {
             if (p.destroyed) return;
@@ -499,6 +559,8 @@
   };
   HostLink.prototype.close = function () {
     clearInterval(this.hb);
+    if (this.spare) { this.spare.close(); this.spare = null; }
+    this.conns.slice().forEach(function (c) { if (c.relay) { try { c.close(); } catch (e) {} } });
     if (this.peer) this.peer.destroy();
   };
 
@@ -531,19 +593,21 @@
   C.openConn = function () {
     var self = this;
     return new Promise(function (res, rej) {
-      var c = self.peer.connect(self.hostId(), { reliable: true, serialization: 'json' });
-      var settled = false;
-      function fail(e) { if (settled) return; settled = true; self.pendingReject = null; clearTimeout(to); try { c.close(); } catch (x) {} rej(e); }
-      var to = setTimeout(function () { fail({ type: 'timeout' }); }, 14000);
-      self.pendingReject = fail;
-      c.on('open', function () {
-        if (settled) return;
-        settled = true; self.pendingReject = null; clearTimeout(to);
+      var d = dial(self.peer, self.hostId(), { spareAfter: self.spareFirst ? 1 : 3500 });
+      self.pendingReject = function (e) { self.pendingReject = null; d.abort(e); };
+      d.promise.then(function (c) {
+        self.pendingReject = null;
+        /* se una volta è servita la strada di riserva, ai prossimi tentativi la si prova subito */
+        if (c.relay) self.spareFirst = true;
         self.conn = c; self.lastSeen = Date.now(); self.online = true;
+        self.via = c.relay ? 'relay' : 'direct';
+        wire(c);
         c.send(self.joinMsg);
         self.startWatchdog();
         res();
-      });
+      }, function (e) { self.pendingReject = null; rej(e); });
+    });
+    function wire(c) {
       c.on('data', function (m) {
         if (c !== self.conn) return;
         self.lastSeen = Date.now();
@@ -552,7 +616,7 @@
       });
       c.on('close', function () { if (c === self.conn) self.onDrop(); });
       c.on('error', function () {});
-    });
+    }
   };
   C.start = function () {
     var self = this;
@@ -597,6 +661,7 @@
   };
   C.close = function () {
     this.closed = true; clearInterval(this.wd);
+    if (this.conn && this.conn.relay) { try { this.conn.close(); } catch (e) {} }
     if (this.peer) this.peer.destroy();
   };
 
@@ -758,6 +823,6 @@
 
   root.Net = {
     makeCode: makeCode, makeToken: makeToken, cleanName: cleanName, HostCore: HostCore, HostLink: HostLink,
-    ClientLink: ClientLink, Voice: Voice, loadPeerLib: loadPeerLib, PREFIX: PREFIX, PLACES: PLACES, HUES: HUES, PEER_OPTS: PEER_OPTS
+    ClientLink: ClientLink, Voice: Voice, loadPeerLib: loadPeerLib, PREFIX: PREFIX, PLACES: PLACES, HUES: HUES, PEER_OPTS: PEER_OPTS, dial: dial, fixConn: fixConn
   };
 })(typeof self !== 'undefined' ? self : this);
